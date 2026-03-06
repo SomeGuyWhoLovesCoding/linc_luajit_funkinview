@@ -1,17 +1,17 @@
 # linc/LuaJIT
-Haxe/hxcpp @:native bindings for [LuaJIT](http://luajit.org/).
+Haxe bindings for [LuaJIT](http://luajit.org/).
 
 This is a [linc](http://snowkit.github.io/linc/) library.
 
 ---
 
-This library works with the Haxe cpp target only.
+This library works with the hxcpp and hl targets only.
 
 ---
 
 ### Example usage
 
-See test/Test.hx
+See hashlinkBuildXmls/hl/
 
 Be sure to read the Lua documentation  
 www.lua.org/manual/5.1/manual.html  
