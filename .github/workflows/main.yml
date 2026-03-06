@@ -33,6 +33,7 @@ jobs:
           haxelib install format --quiet
           haxelib install hxp --quiet
           haxelib install hxcpp --quiet
+          cd
           haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
         shell: cmd
       - name: Compile
