@@ -95,7 +95,6 @@ jobs:
           haxelib install hxp --quiet
           haxelib install hxcpp --quiet
           haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
-        shell: cmd
       - name: Compile
         run: |
           cd ./hashlinkBuildXmls/hl_linux/
