@@ -13,14 +13,18 @@ extern "C" {
     #include "luajit.h"
 }
 
+static vdynamic* obj = nullptr;
+
 // Helper to create a vstring* from a C string
 static void* hl_alloc_string(const char* str) {
-    if (!str) return NULL;
+    if (!str) return nullptr;
     int len = strlen(str);
     
     // In HL, String is an object with bytes and length
     // We need to allocate the object and its fields
-    vdynamic* obj = hl_alloc_obj(&hlt_dyn); // This creates a dynamic object
+    if (obj == nullptr) {
+        obj = hl_alloc_obj(&hlt_dyn); // This creates a dynamic object
+    }
     
     // Set up the string fields
     hl_dyn_setp(obj, hl_hash_utf8("bytes"), &hlt_bytes, hl_copy_bytes((const vbyte*)str, len));
@@ -37,7 +41,7 @@ static const char* hl_get_cstring(void* str_obj) {
 }
 
 static vbyte* hl_alloc_bytes_from_string(const char* str) {
-    if (!str) return NULL;
+    if (!str) return nullptr;
     return hl_copy_bytes((const vbyte*)str, strlen(str));
 }
 
@@ -45,7 +49,7 @@ static vbyte* hl_alloc_bytes_from_string(const char* str) {
 // Internal: callback dispatcher
 // ---------------------------------------------------------------------------
 
-static vclosure *hl_callback_fn = NULL;
+static vclosure *hl_callback_fn = nullptr;
 
 static int hl_lua_callback_dispatcher(lua_State *L) {
     if (!hl_callback_fn) return 0;
@@ -68,7 +72,7 @@ static int hl_lua_callback_dispatcher(lua_State *L) {
 // Internal: hxtrace (Lua print → Haxe)
 // ---------------------------------------------------------------------------
 
-static vclosure *hl_trace_fn = NULL;
+static vclosure *hl_trace_fn = nullptr;
 
 static int hl_lua_print(lua_State *L) {
     if (!hl_trace_fn) return 0;
@@ -102,7 +106,7 @@ static int hl_lua_print(lua_State *L) {
 
 static const luaL_Reg hl_printlib[] = {
     {"print", hl_lua_print},
-    {NULL, NULL}
+    {nullptr, nullptr}
 };
 
 // ---------------------------------------------------------------------------
@@ -192,7 +196,7 @@ HL_PRIM vbyte *HL_NAME(_typename)(lua_State *L, int t) {
 
 HL_PRIM vbyte *HL_NAME(_tostring)(lua_State *L, int i) {
     const char *s = lua_tostring(L, i);
-    return s ? hl_alloc_bytes_from_string(s) : NULL;
+    return s ? hl_alloc_bytes_from_string(s) : nullptr;
 }
 
 // Use _STRING macro which expands to _OBJ(_BYTES _I32) = "OBi"
@@ -482,7 +486,7 @@ HL_PRIM void HL_NAME(register_hxtrace_func)(vclosure *fn) {
 
 HL_PRIM void HL_NAME(register_hxtrace_lib)(lua_State *L) {
     lua_getglobal(L, "_G");
-    luaL_register(L, NULL, hl_printlib);
+    luaL_register(L, nullptr, hl_printlib);
     lua_pop(L, 1);
 }
 
