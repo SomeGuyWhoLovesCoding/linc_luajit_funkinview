@@ -135,10 +135,10 @@ HL_PRIM int HL_NAME(isstring)(lua_State *L, int i)    { return lua_isstring(L, i
 HL_PRIM int HL_NAME(iscfunction)(lua_State *L, int i) { return lua_iscfunction(L, i); }
 HL_PRIM int HL_NAME(isuserdata)(lua_State *L, int i)  { return lua_isuserdata(L, i); }
 HL_PRIM int HL_NAME(isboolean)(lua_State *L, int i)   { return lua_isboolean(L, i); }
-HL_PRIM bool HL_NAME(istable)(lua_State *L, int i)     { return lua_istable(L, i); }
-HL_PRIM bool HL_NAME(isnil)(lua_State *L, int i)       { return lua_isnil(L, i); }
-HL_PRIM bool HL_NAME(isnone)(lua_State *L, int i)      { return lua_isnone(L, i); }
-HL_PRIM bool HL_NAME(isnoneornil)(lua_State *L, int i) { return lua_isnoneornil(L, i); }
+HL_PRIM int HL_NAME(istable)(lua_State *L, int i)     { return lua_istable(L, i); }
+HL_PRIM int HL_NAME(isnil)(lua_State *L, int i)       { return lua_isnil(L, i); }
+HL_PRIM int HL_NAME(isnone)(lua_State *L, int i)      { return lua_isnone(L, i); }
+HL_PRIM int HL_NAME(isnoneornil)(lua_State *L, int i) { return lua_isnoneornil(L, i); }
 
 DEFINE_PRIM(_I32, isnumber,    _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32, isfunction,  _ABSTRACT(lua_state) _I32);
@@ -146,10 +146,10 @@ DEFINE_PRIM(_I32, isstring,    _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32, iscfunction, _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32, isuserdata,  _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32, isboolean,   _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_BOOL, istable,     _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_BOOL, isnil,       _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_BOOL, isnone,      _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_BOOL, isnoneornil, _ABSTRACT(lua_state) _I32);//
+DEFINE_PRIM(_I32, istable,     _ABSTRACT(lua_state) _I32);
+DEFINE_PRIM(_I32, isnil,       _ABSTRACT(lua_state) _I32);
+DEFINE_PRIM(_I32, isnone,      _ABSTRACT(lua_state) _I32);
+DEFINE_PRIM(_I32, isnoneornil, _ABSTRACT(lua_state) _I32);//
 
 HL_PRIM int     HL_NAME(type)(lua_State *L, int i)     { return lua_type(L, i); }
 HL_PRIM double  HL_NAME(tonumber)(lua_State *L, int i) { return (double)lua_tonumber(L, i); }
