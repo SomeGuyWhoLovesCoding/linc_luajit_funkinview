@@ -14,23 +14,32 @@ extern "C" {
 }
 
 // Helper to create a vstring* from a C string
-static vstring* hl_alloc_string(const char* str) {
+static void* hl_alloc_string(const char* str) {
     if (!str) return NULL;
     int len = strlen(str);
     
-    // Allocate memory for the string object
-    vstring* s = (vstring*)hl_gc_alloc_noptr(sizeof(vstring));
-    s->t = &hlt_dyn;  // Use dynamic type
+    // In HL, String is an object with bytes and length
+    // We need to allocate the object and its fields
+    vdynamic* obj = hl_alloc_obj(&hlt_dyn); // This creates a dynamic object
     
-    // Allocate and copy bytes
-    s->bytes = hl_copy_bytes((const vbyte*)str, len);
-    s->length = len;
+    // Set up the string fields
+    hl_dyn_setp(obj, hl_hash_utf8("bytes"), &hlt_bytes, hl_copy_bytes((const vbyte*)str, len));
+    hl_dyn_seti(obj, hl_hash_utf8("length"), &hlt_i32, len);
     
-    return s;
+    return obj;
 }
 
 // Helper to get C string from vstring*
-#define HL_TOSTR(s)    ((const char*)hl_to_utf8((s)->bytes))
+static const char* hl_get_cstring(void* str_obj) {
+    vdynamic* obj = (vdynamic*)str_obj;
+    vbyte* bytes = (vbyte*)hl_dyn_getp(obj, hl_hash_utf8("bytes"), &hlt_bytes);
+    return (const char*)hl_to_utf8((const uchar*)bytes);
+}
+
+static vbyte* hl_alloc_bytes_from_string(const char* str) {
+    if (!str) return NULL;
+    return hl_copy_bytes((const vbyte*)str, strlen(str));
+}
 
 // ---------------------------------------------------------------------------
 // Internal: callback dispatcher
@@ -176,22 +185,23 @@ HL_PRIM int     HL_NAME(tointeger)(lua_State *L, int i){ return (int)lua_tointeg
 HL_PRIM bool    HL_NAME(toboolean)(lua_State *L, int i){ return lua_toboolean(L, i) != 0; }
 HL_PRIM int     HL_NAME(objlen)(lua_State *L, int i)   { return (int)lua_objlen(L, i); }
 
-HL_PRIM vstring *HL_NAME(typename)(lua_State *L, int t) {
+HL_PRIM vbyte *HL_NAME(_typename)(lua_State *L, int t) {
     const char *s = lua_typename(L, t);
-    return hl_alloc_string(s);
+    return hl_alloc_bytes_from_string(s);
 }
 
-HL_PRIM vstring *HL_NAME(tostring)(lua_State *L, int i) {
+HL_PRIM vbyte *HL_NAME(_tostring)(lua_State *L, int i) {
     const char *s = lua_tostring(L, i);
-    return s ? hl_alloc_string(s) : NULL;
+    return s ? hl_alloc_bytes_from_string(s) : NULL;
 }
 
+// Use _STRING macro which expands to _OBJ(_BYTES _I32) = "OBi"
 DEFINE_PRIM(_I32,    type,      _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_DYN, typename,  _ABSTRACT(lua_state) _I32);
+DEFINE_PRIM(_BYTES, _typename,  _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_F64,    tonumber,  _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32,    tointeger, _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_BOOL,   toboolean, _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_DYN, tostring,  _ABSTRACT(lua_state) _I32);
+DEFINE_PRIM(_BYTES, _tostring,  _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32,    objlen,    _ABSTRACT(lua_state) _I32);
 
 // ---------------------------------------------------------------------------
@@ -204,15 +214,15 @@ HL_PRIM void HL_NAME(pushinteger)(lua_State *L, int n)   { lua_pushinteger(L, (l
 HL_PRIM void HL_NAME(pushboolean)(lua_State *L, bool b)  { lua_pushboolean(L, b ? 1 : 0); }
 HL_PRIM int  HL_NAME(pushthread)(lua_State *L)           { return lua_pushthread(L); }
 
-HL_PRIM void HL_NAME(pushstring)(lua_State *L, vstring *s) {
-    const char *str = HL_TOSTR(s);
+HL_PRIM void HL_NAME(pushstring)(lua_State *L, void *s) {
+    const char *str = hl_get_cstring(s);
     lua_pushstring(L, str);
 }
 
 DEFINE_PRIM(_VOID,   pushnil,     _ABSTRACT(lua_state));
 DEFINE_PRIM(_VOID,   pushnumber,  _ABSTRACT(lua_state) _F64);
 DEFINE_PRIM(_VOID,   pushinteger, _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_VOID,   pushstring,  _ABSTRACT(lua_state) _DYN);
+DEFINE_PRIM(_VOID,   pushstring,  _ABSTRACT(lua_state) _STRING);
 DEFINE_PRIM(_VOID,   pushboolean, _ABSTRACT(lua_state) _BOOL);
 DEFINE_PRIM(_I32,    pushthread,  _ABSTRACT(lua_state));
 
@@ -226,23 +236,23 @@ HL_PRIM void HL_NAME(rawgeti)(lua_State *L, int i, int n) { lua_rawgeti(L, i, n)
 HL_PRIM void HL_NAME(createtable)(lua_State *L, int a, int r) { lua_createtable(L, a, r); }
 HL_PRIM int  HL_NAME(getmetatable)(lua_State *L, int i)   { return lua_getmetatable(L, i); }
 
-HL_PRIM void HL_NAME(getfield)(lua_State *L, int i, vstring *k) {
-    const char *key = HL_TOSTR(k);
+HL_PRIM void HL_NAME(getfield)(lua_State *L, int i, void *k) {
+    const char *key = hl_get_cstring(k);
     lua_getfield(L, i, key);
 }
 
-HL_PRIM void HL_NAME(getglobal)(lua_State *L, vstring *name) {
-    const char *n = HL_TOSTR(name);
+HL_PRIM void HL_NAME(getglobal)(lua_State *L, void *name) {
+    const char *n = hl_get_cstring(name);
     lua_getglobal(L, n);
 }
 
 DEFINE_PRIM(_VOID,  gettable,    _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_VOID,  getfield,    _ABSTRACT(lua_state) _I32 _DYN);
+DEFINE_PRIM(_VOID,  getfield,    _ABSTRACT(lua_state) _I32 _STRING);
 DEFINE_PRIM(_VOID,  rawget,      _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_VOID,  rawgeti,     _ABSTRACT(lua_state) _I32 _I32);
 DEFINE_PRIM(_VOID,  createtable, _ABSTRACT(lua_state) _I32 _I32);
 DEFINE_PRIM(_I32,   getmetatable,_ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_VOID,  getglobal,   _ABSTRACT(lua_state) _DYN);
+DEFINE_PRIM(_VOID,  getglobal,   _ABSTRACT(lua_state) _STRING);
 
 // ---------------------------------------------------------------------------
 // Set
@@ -253,22 +263,22 @@ HL_PRIM void HL_NAME(rawset)(lua_State *L, int i)         { lua_rawset(L, i); }
 HL_PRIM void HL_NAME(rawseti)(lua_State *L, int i, int n) { lua_rawseti(L, i, n); }
 HL_PRIM int  HL_NAME(setmetatable)(lua_State *L, int i)   { return lua_setmetatable(L, i); }
 
-HL_PRIM void HL_NAME(setfield)(lua_State *L, int i, vstring *k) {
-    const char *key = HL_TOSTR(k);
+HL_PRIM void HL_NAME(setfield)(lua_State *L, int i, void *k) {
+    const char *key = hl_get_cstring(k);
     lua_setfield(L, i, key);
 }
 
-HL_PRIM void HL_NAME(setglobal)(lua_State *L, vstring *name) {
-    const char *n = HL_TOSTR(name);
+HL_PRIM void HL_NAME(setglobal)(lua_State *L, void *name) {
+    const char *n = hl_get_cstring(name);
     lua_setglobal(L, n);
 }
 
 DEFINE_PRIM(_VOID,  settable,    _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_VOID,  setfield,    _ABSTRACT(lua_state) _I32 _DYN);
+DEFINE_PRIM(_VOID,  setfield,    _ABSTRACT(lua_state) _I32 _STRING);
 DEFINE_PRIM(_VOID,  rawset,      _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_VOID,  rawseti,     _ABSTRACT(lua_state) _I32 _I32);
 DEFINE_PRIM(_I32,   setmetatable,_ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_VOID,  setglobal,   _ABSTRACT(lua_state) _DYN);
+DEFINE_PRIM(_VOID,  setglobal,   _ABSTRACT(lua_state) _STRING);
 
 // ---------------------------------------------------------------------------
 // Load / call / misc
@@ -304,23 +314,23 @@ DEFINE_PRIM(_VOID, newtable,     _ABSTRACT(lua_state));
 // luaL
 // ---------------------------------------------------------------------------
 
-HL_PRIM int    HL_NAME(lual_dofile)(lua_State *L, vstring *f)    { 
-    const char *filename = HL_TOSTR(f);
+HL_PRIM int    HL_NAME(lual_dofile)(lua_State *L, void *f)    { 
+    const char *filename = hl_get_cstring(f);
     return luaL_dofile(L, filename); 
 }
 
-HL_PRIM int    HL_NAME(lual_dostring)(lua_State *L, vstring *s)  { 
-    const char *str = HL_TOSTR(s);
+HL_PRIM int    HL_NAME(lual_dostring)(lua_State *L, void *s)  { 
+    const char *str = hl_get_cstring(s);
     return luaL_dostring(L, str); 
 }
 
-HL_PRIM int    HL_NAME(lual_loadfile)(lua_State *L, vstring *f)  { 
-    const char *filename = HL_TOSTR(f);
+HL_PRIM int    HL_NAME(lual_loadfile)(lua_State *L, void *f)  { 
+    const char *filename = hl_get_cstring(f);
     return luaL_loadfile(L, filename); 
 }
 
-HL_PRIM int    HL_NAME(lual_loadstring)(lua_State *L, vstring *s){ 
-    const char *str = HL_TOSTR(s);
+HL_PRIM int    HL_NAME(lual_loadstring)(lua_State *L, void *s){ 
+    const char *str = hl_get_cstring(s);
     return luaL_loadstring(L, str); 
 }
 
@@ -333,54 +343,54 @@ HL_PRIM int    HL_NAME(lual_checkinteger)(lua_State *L, int n)   { return (int)l
 HL_PRIM void   HL_NAME(lual_checktype)(lua_State *L, int n, int t){ luaL_checktype(L, n, t); }
 HL_PRIM void   HL_NAME(lual_checkany)(lua_State *L, int n)       { luaL_checkany(L, n); }
 
-HL_PRIM int HL_NAME(lual_newmetatable)(lua_State *L, vstring *n) {
-    const char *name = HL_TOSTR(n);
+HL_PRIM int HL_NAME(lual_newmetatable)(lua_State *L, void *n) {
+    const char *name = hl_get_cstring(n);
     return luaL_newmetatable(L, name);
 }
 
-HL_PRIM int HL_NAME(lual_error)(lua_State *L, vstring *msg) {
-    const char *m = HL_TOSTR(msg);
+HL_PRIM int HL_NAME(lual_error)(lua_State *L, void *msg) {
+    const char *m = hl_get_cstring(msg);
     return luaL_error(L, "%s", m);
 }
 
-HL_PRIM vstring *HL_NAME(lual_typename)(lua_State *L, int i) {
+HL_PRIM void *HL_NAME(lual_typename)(lua_State *L, int i) {
     const char *s = luaL_typename(L, i);
     return hl_alloc_string(s);
 }
 
-HL_PRIM vstring *HL_NAME(lual_checkstring)(lua_State *L, int n) {
+HL_PRIM void *HL_NAME(lual_checkstring)(lua_State *L, int n) {
     const char *s = luaL_checkstring(L, n);
     return hl_alloc_string(s);
 }
 
-HL_PRIM int HL_NAME(lual_argerror)(lua_State *L, int n, vstring *msg) {
-    const char *m = HL_TOSTR(msg);
+HL_PRIM int HL_NAME(lual_argerror)(lua_State *L, int n, void *msg) {
+    const char *m = hl_get_cstring(msg);
     return luaL_argerror(L, n, m);
 }
 
-HL_PRIM void HL_NAME(lual_traceback)(lua_State *L, lua_State *L2, vstring *msg, int lv) {
-    const char *m = HL_TOSTR(msg);
+HL_PRIM void HL_NAME(lual_traceback)(lua_State *L, lua_State *L2, void *msg, int lv) {
+    const char *m = hl_get_cstring(msg);
     luaL_traceback(L, L2, m, lv);
 }
 
-DEFINE_PRIM(_I32,    lual_dofile,       _ABSTRACT(lua_state) _DYN);
-DEFINE_PRIM(_I32,    lual_dostring,     _ABSTRACT(lua_state) _DYN);
-DEFINE_PRIM(_I32,    lual_loadfile,     _ABSTRACT(lua_state) _DYN);
-DEFINE_PRIM(_I32,    lual_loadstring,   _ABSTRACT(lua_state) _DYN);
+DEFINE_PRIM(_I32,    lual_dofile,       _ABSTRACT(lua_state) _STRING);
+DEFINE_PRIM(_I32,    lual_dostring,     _ABSTRACT(lua_state) _STRING);
+DEFINE_PRIM(_I32,    lual_loadfile,     _ABSTRACT(lua_state) _STRING);
+DEFINE_PRIM(_I32,    lual_loadstring,   _ABSTRACT(lua_state) _STRING);
 DEFINE_PRIM(_VOID,   lual_openlibs,     _ABSTRACT(lua_state));
 DEFINE_PRIM(_I32,    lual_ref,          _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_VOID,   lual_unref,        _ABSTRACT(lua_state) _I32 _I32);
 DEFINE_PRIM(_VOID,   lual_where,        _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_I32,    lual_newmetatable, _ABSTRACT(lua_state) _DYN);
-DEFINE_PRIM(_I32,    lual_error,        _ABSTRACT(lua_state) _DYN);
-DEFINE_PRIM(_DYN,    lual_typename,     _ABSTRACT(lua_state) _I32);
+DEFINE_PRIM(_I32,    lual_newmetatable, _ABSTRACT(lua_state) _STRING);
+DEFINE_PRIM(_I32,    lual_error,        _ABSTRACT(lua_state) _STRING);
+DEFINE_PRIM(_STRING, lual_typename,     _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_F64,    lual_checknumber,  _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32,    lual_checkinteger, _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_DYN,    lual_checkstring,  _ABSTRACT(lua_state) _I32);
+DEFINE_PRIM(_STRING, lual_checkstring,  _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_VOID,   lual_checktype,    _ABSTRACT(lua_state) _I32 _I32);
 DEFINE_PRIM(_VOID,   lual_checkany,     _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_I32,    lual_argerror,     _ABSTRACT(lua_state) _I32 _DYN);
-DEFINE_PRIM(_VOID,   lual_traceback,    _ABSTRACT(lua_state) _ABSTRACT(lua_state) _DYN _I32);
+DEFINE_PRIM(_I32,    lual_argerror,     _ABSTRACT(lua_state) _I32 _STRING);
+DEFINE_PRIM(_VOID,   lual_traceback,    _ABSTRACT(lua_state) _ABSTRACT(lua_state) _STRING _I32);
 
 // ---------------------------------------------------------------------------
 // LuaOpen
@@ -421,16 +431,17 @@ DEFINE_PRIM(_I32, jit_setmode, _ABSTRACT(lua_state) _I32 _I32);
 // Version
 // ---------------------------------------------------------------------------
 
-HL_PRIM vstring *HL_NAME(version)() { 
-    return hl_alloc_string(LUA_VERSION);
+// For version functions, return bytes
+HL_PRIM vbyte *HL_NAME(version)() { 
+    return hl_alloc_bytes_from_string(LUA_VERSION);
 }
 
-HL_PRIM vstring *HL_NAME(versionjit)() { 
-    return hl_alloc_string(LUAJIT_VERSION);
+HL_PRIM vbyte *HL_NAME(versionjit)() { 
+    return hl_alloc_bytes_from_string(LUAJIT_VERSION);
 }
 
-DEFINE_PRIM(_DYN, version,    _NO_ARG);
-DEFINE_PRIM(_DYN, versionjit, _NO_ARG);
+DEFINE_PRIM(_BYTES, version,    _NO_ARG);
+DEFINE_PRIM(_BYTES, versionjit, _NO_ARG);
 
 // ---------------------------------------------------------------------------
 // Callback system
@@ -442,22 +453,22 @@ HL_PRIM void HL_NAME(set_callbacks_function)(vclosure *fn) {
     if (fn) hl_add_root((vdynamic**)&hl_callback_fn);
 }
 
-HL_PRIM void HL_NAME(add_callback_function)(lua_State *L, vstring *name) {
-    const char *n = HL_TOSTR(name);
+HL_PRIM void HL_NAME(add_callback_function)(lua_State *L, void *name) {
+    const char *n = hl_get_cstring(name);
     lua_pushstring(L, n);
     lua_pushcclosure(L, hl_lua_callback_dispatcher, 1);
     lua_setglobal(L, n);
 }
 
-HL_PRIM void HL_NAME(remove_callback_function)(lua_State *L, vstring *name) {
-    const char *n = HL_TOSTR(name);
+HL_PRIM void HL_NAME(remove_callback_function)(lua_State *L, void *name) {
+    const char *n = hl_get_cstring(name);
     lua_pushnil(L);
     lua_setglobal(L, n);
 }
 
-DEFINE_PRIM(_VOID, set_callbacks_function,   _FUN(_I32, _ABSTRACT(lua_state) _DYN));
-DEFINE_PRIM(_VOID, add_callback_function,    _ABSTRACT(lua_state) _DYN);
-DEFINE_PRIM(_VOID, remove_callback_function, _ABSTRACT(lua_state) _DYN);
+DEFINE_PRIM(_VOID, set_callbacks_function,   _FUN(_I32, _ABSTRACT(lua_state) _STRING));
+DEFINE_PRIM(_VOID, add_callback_function,    _ABSTRACT(lua_state) _STRING);
+DEFINE_PRIM(_VOID, remove_callback_function, _ABSTRACT(lua_state) _STRING);
 
 // ---------------------------------------------------------------------------
 // hxtrace
@@ -475,7 +486,7 @@ HL_PRIM void HL_NAME(register_hxtrace_lib)(lua_State *L) {
     lua_pop(L, 1);
 }
 
-DEFINE_PRIM(_VOID, register_hxtrace_func, _FUN(_I32, _DYN));
+DEFINE_PRIM(_VOID, register_hxtrace_func, _FUN(_I32, _STRING));
 DEFINE_PRIM(_VOID, register_hxtrace_lib,  _ABSTRACT(lua_state));
 
 // ---------------------------------------------------------------------------

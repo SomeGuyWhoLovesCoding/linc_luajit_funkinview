@@ -566,12 +566,18 @@ class Lua {
     public static function isnone(l:State, idx:Int):Int { return 0; }
     public static function isnoneornil(l:State, idx:Int):Int { return 0; }
     public static function type(l:State, idx:Int):Int { return 0; }
-    public static function typename(l:State, tp:Int):String { return null; }
+    private static function _typename(l:State, tp:Int):hl.Bytes { return null; }
+	public static function typename(l:State, tp:Int):String {
+		return @:privateAccess String.fromUTF8(_typename(l, tp));
+	}
 
     public static function tonumber(l:State, idx:Int):Float { return 0; }
     public static function tointeger(l:State, idx:Int):Int { return 0; }
     public static function toboolean(l:State, idx:Int):Bool { return false; }
-    public static function tostring(l:State, idx:Int):String { return null; }
+    private static function _tostring(l:State, idx:Int):hl.Bytes { return null; }
+	public static function tostring(l:State, idx:Int):String {
+		return @:privateAccess String.fromUTF8(_tostring(l, idx));
+	}
     public static function objlen(l:State, idx:Int):Int { return 0; }
 
     // -----------------------------------------------------------------------
