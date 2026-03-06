@@ -1,6 +1,7 @@
 package llua;
 
 
+#if cpp
 @:include('linc_lua.h')
 @:native('::cpp::Reference<lua_State>')
 extern class State {}
@@ -9,6 +10,12 @@ extern class State {}
 extern class Lua_State {}
 
 typedef StatePointer = cpp.RawPointer<Lua_State>;
+#elseif hl
+@:hlNative("lua")
+abstract State(hl.Abstract<"lua_state">) {
+    inline function new(s:hl.Abstract<"lua_state">) this = s;
+}
+#end
 
 
 // @:native("lua_State")

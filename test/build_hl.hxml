@@ -1,6 +1,7 @@
 -lib linc_luajit_funkinview
 -main Test.hx
--cpp cpp/
+# output to a file called out.hl
+-hl out.hl
 -cp ../
 # pick a target
 

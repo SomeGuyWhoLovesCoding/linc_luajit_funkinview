@@ -1,312 +1,274 @@
 package llua;
 
-
 import llua.State;
 import llua.Lua;
 import llua.LuaL;
 import llua.Macro.*;
 import haxe.DynamicAccess;
+
 class Convert {
 
-	/**
-	 * To Lua
-	 */
-	public static var enableUnsupportedTraces = false;
-	public static var allowFunctions = true;
-	public static var functionReferences:Map<Dynamic,Array<Dynamic>> = new Map<Dynamic,Array<Dynamic>>();
-	// It's recommended to purge this every now and then. Note that this'll effect *every* lua state
-	@:keep inline public static function cleanFunctionRefs(){
-		functionReferences = new Map<Dynamic,Array<Dynamic>>();
-	}
-	public static function toLua(l:State, val:Any):Bool {
+	// -----------------------------------------------------------------------
+	// Configuration
+	// -----------------------------------------------------------------------
 
+	/** If true, unsupported Haxe→Lua conversions emit a trace warning. */
+	public static var enableUnsupportedTraces:Bool = false;
+
+	// -----------------------------------------------------------------------
+	// Haxe → Lua
+	// -----------------------------------------------------------------------
+
+	/**
+	 * Push a Haxe value onto the Lua stack.
+	 * Returns true if the value was pushed, false if unsupported.
+	 */
+	public static function toLua(l:State, val:Any):Bool {
 		switch (Type.typeof(val)) {
-			case Type.ValueType.TNull:
+			case TNull:
 				Lua.pushnil(l);
-			case Type.ValueType.TBool:
+			case TBool:
 				Lua.pushboolean(l, val);
-			case Type.ValueType.TInt:
+			case TInt:
 				Lua.pushinteger(l, cast(val, Int));
-			// case Type.ValueType.TFunction: 
-				// if(!allowFunctions) return false;
-				// return false;
-				// var funcIndex = -1;
-				// if(functionReferences[l] == null){
-				// 	functionReferences[l] = [val];
-				// 	funcIndex = 0;
-				// }else{
-				// 	for(i => v in functionReferences[l]){
-				// 		if(v == val){
-				// 			funcIndex = i;
-				// 			break;
-				// 		}
-				// 	}
-				// 	if(funcIndex == -1){
-				// 		funcIndex = functionReferences[l].length;
-				// 		functionReferences[l].push(val);
-				// 	}
-				// }
-				
-				// Lua.pushcfunction(l,
-				
-				// {
-				// 	return callback_handler(val,l);
-				// }),1);
-			case Type.ValueType.TFloat:
+			case TFloat:
 				Lua.pushnumber(l, val);
-			case Type.ValueType.TClass(String):
+			case TClass(String):
 				Lua.pushstring(l, cast(val, String));
-			case Type.ValueType.TClass(Array):
+			case TClass(Array):
 				arrayToLua(l, val);
-			case Type.ValueType.TClass(haxe.ds.StringMap) | Type.ValueType.TClass(haxe.ds.ObjectMap):
+			case TClass(haxe.ds.StringMap) | TClass(haxe.ds.IntMap) | TClass(haxe.ds.ObjectMap):
 				mapToLua(l, val);
-			case Type.ValueType.TObject:
-				anonToLua(l, val); // {}
+			case TObject:
+				anonToLua(l, val);
+			case TFunction:
+				// Push a Haxe function as a Lua C closure via the callback system.
+				// The function must be registered through Lua_helper so the
+				// closure name can be resolved in the callback dispatcher.
+				// For anonymous push, we register under a generated key.
+				if (enableUnsupportedTraces)
+					trace('TFunction push not supported via toLua; use Lua_helper.add_callback instead.');
+				Lua.pushnil(l);
+				return false;
 			default:
-				if(enableUnsupportedTraces) trace('Haxe value of $val of type ${Type.typeof(val)} not supported!' );
+				if (enableUnsupportedTraces)
+					trace('Haxe value $val of type ${Type.typeof(val)} not supported for toLua.');
+				Lua.pushnil(l);
 				return false;
 		}
 		return true;
 	}
 
-	public static function callback_handler(cbf:Dynamic,l:State,?object:Dynamic/*,cbf:Dynamic,lsp:Dynamic*/):Int {
-		try{
-			final l:State = l;
-			final nparams:Int = Lua.gettop(l);
-
-			if(cbf == null) return 0;
-
-			/* return the number of results */
-			final ret:Dynamic = Reflect.callMethod(object,cbf,[for (i in 0...nparams) fromLua(l, i + 1)]);
-			if(ret != null){
-				toLua(l, ret);
-				return 1;
-			}
-		}catch(e){
-			trace('${e}');
-			throw(e);
-		}
-		return 0;
-
-	}
-
-	@:keep public static inline function arrayToLua(l:State, arr:Array<Any>) {
+	/** Push an Array as a 1-based Lua sequence table. */
+	@:keep public static inline function arrayToLua(l:State, arr:Array<Any>):Void {
 		Lua.createtable(l, arr.length, 0);
 		for (i => v in arr) {
-			Lua.pushnumber(l, i + 1);
+			// Use rawseti for integer keys — faster than pushinteger+settable.
 			toLua(l, v);
-			Lua.settable(l, -3);
+			Lua.rawseti(l, -2, i + 1);
 		}
-
 	}
 
-	@:keep static inline function mapToLua(l:State, res:Map<String,Dynamic>) {
+	/** Push a Map (string or int keys) as a Lua table. */
+	@:keep public static function mapToLua(l:State, res:Dynamic):Void {
 		Lua.createtable(l, 0, 0);
-		for (index => val in res){
-			Lua.pushstring(l, Std.string(index));
+		// Works for StringMap, IntMap, ObjectMap — all expose iterator().
+		var map:haxe.Constraints.IMap<Dynamic, Dynamic> = cast res;
+		for (key => val in map) {
+			toLua(l, key);
 			toLua(l, val);
 			Lua.settable(l, -3);
 		}
-
 	}
 
-	@:keep static inline function anonToLua(l:State, res:Any) {
-		Lua.createtable(l, 0, 0);
-		for (n in Reflect.fields(res)){
+	/** Push an anonymous object as a Lua table. */
+	@:keep public static inline function anonToLua(l:State, res:Any):Void {
+		var fields = Reflect.fields(res);
+		Lua.createtable(l, 0, fields.length);
+		for (n in fields) {
 			Lua.pushstring(l, n);
 			toLua(l, Reflect.field(res, n));
 			Lua.settable(l, -3);
 		}
 	}
-	// @:keep static inline function instanceToLua(l:State, res:Any) {
-	// 	Lua.createtable(l, 0, 0);
-	// 	Lua.pushstring(l, "__index");
 
-	// 	// for (n in Reflect.fields(res)){
-	// 	// 	Lua.pushstring(l, n);
-	// 	// 	toLua(l, Reflect.field(res, n));
-	// 	// 	Lua.settable(l, -3);
-	// 	// }
-	// }
-
-	@:keep public static inline function setGlobal(l:State, index:String, value:Dynamic) {
-		// Lua.getglobal(l, Lua.LUA_GLOBALSINDEX);
-		// toLua(l, index);
-
-		toLua(l, value);
-		Lua.setfield(l, Lua.LUA_GLOBALSINDEX, index);
-		// Lua.settable(l, -3);
-		// Lua.pop(l,0);
-	}
 	/**
-	 * From Lua
+	 * Set a Lua global directly to a Haxe value.
+	 * Avoids the old double-push pattern.
 	 */
-	public static function fromLua(l:State, v:Int):Any {
+	@:keep public static inline function setGlobal(l:State, index:String, value:Dynamic):Void {
+		toLua(l, value);
+		Lua.setglobal(l, index);
+	}
 
-		final luaType = Lua.type(l, v);
-		return switch(luaType) {
+	// -----------------------------------------------------------------------
+	// Lua → Haxe
+	// -----------------------------------------------------------------------
+
+	/** Read a value at stack index `v` and convert it to a Haxe value. */
+	public static function fromLua(l:State, v:Int):Any {
+		return switch (Lua.type(l, v)) {
 			case Lua.LUA_TNIL:
 				null;
 			case Lua.LUA_TBOOLEAN:
 				Lua.toboolean(l, v);
 			case Lua.LUA_TNUMBER:
-				Lua.tonumber(l, v);
+				// Preserve Int vs Float distinction when the number is integral.
+				var n = Lua.tonumber(l, v);
+				var ni = Lua.tointeger(l, v);
+				(n == ni) ? cast ni : n;
 			case Lua.LUA_TSTRING:
 				Lua.tostring(l, v);
 			case Lua.LUA_TTABLE:
 				toHaxeObj(l, v);
-			case Lua.LUA_TFUNCTION: // From https://github.com/DragShot/linc_luajit/
+			case Lua.LUA_TFUNCTION:
+				// Consume the value into a registry ref so the function stays alive.
+				Lua.pushvalue(l, v);
 				new LuaCallback(l, LuaL.ref(l, Lua.LUA_REGISTRYINDEX));
-			// 	trace("function\n");
-			// case Lua.LUA_TUSERDATA:
-			// 	ret = LuaL.ref(l, Lua.LUA_REGISTRYINDEX);
-			// 	trace("userdata\n");
-			// case Lua.LUA_TLIGHTUSERDATA:
-			// 	ret = LuaL.ref(l, Lua.LUA_REGISTRYINDEX);
-			// 	trace("lightuserdata\n");
-			// case Lua.LUA_TTHREAD:
-			// 	ret = null;
-			// 	trace("thread\n");
 			default:
-				if(enableUnsupportedTraces) trace('Return value $v of type $luaType not supported');
+				if (enableUnsupportedTraces)
+					trace('Lua value at $v of type ${Lua.type(l, v)} not supported for fromLua.');
 				null;
 		}
-
 	}
 
-	/*static inline function fromLuaTable(l:State):Any {
+	/**
+	 * Convert a Lua table at stack index `i` to either an Array or an
+	 * anonymous object, depending on whether all keys are consecutive integers.
+	 */
+	public static function toHaxeObj(l:State, i:Int):Any {
+		var isArray = true;
+		var maxIndex = 0;
+		var count = 0;
 
-		var array:Bool = true;
-		var ret:Any = null;
-
-		Lua.pushnil(l);
-		while(Lua.next(l,-2) != 0) {
-
-			if (Lua.type(l, -2) != Lua.LUA_TNUMBER) {
-				array = false;
-				Lua.pop(l,2);
-				break;
-			}
-
-			// check this
-			var n:Float = Lua.tonumber(l, -2);
-			if(n != Std.int(n)){
-				array = false;
-				Lua.pop(l,2);
-				break;
-			}
-
-			Lua.pop(l,1);
-
-		}
-
-		if(array){
-
-			var arr:Array<Any> = [];
-			Lua.pushnil(l);
-			while(Lua.next(l,-2) != 0) {
-				var index:Int = Lua.tointeger(l, -2) - 1; // lua has 1 based indices instead of 0
-				arr[index] = fromLua(l, -1); // with holes
-				Lua.pop(l,1);
-			}
-			ret = arr;
-
-		} else {
-
-			var obj:Anon = Anon.create(); // {}
-			Lua.pushnil(l);
-			while(Lua.next(l,-2) != 0) {
-				obj.add(Std.string(fromLua(l, -2)), fromLua(l, -1)); // works with mixed tables
-				Lua.pop(l,1);
-			}
-			ret = obj;
-
-		}
-
-		return ret;
-
-	}
-
-}*/
-	public static function toHaxeObj(l, i:Int):Any {
-		var hasItems = false;
-		var array = true;
-
-		loopTable(l, i,{
-			hasItems = true;
-			if(Lua.type(l, -2) != Lua.LUA_TNUMBER){
-				array = false; 
-			}
-			final index = Lua.tonumber(l, -2);
-			if(index < 0 || Std.int(index) != index) {
-				array = false; 
-			}
-		});
-		if(!hasItems) return {}
-
-		if(array) {
-			final v:Array<Dynamic> = [];
-			loopTable(l, i, {
-				v[Std.int(Lua.tonumber(l, -2)) - 1] = fromLua(l, -1);
-			});
-			return cast v;
-		}
-		final v:DynamicAccess<Any> = {};
+		// First pass: inspect keys.
 		loopTable(l, i, {
-			switch Lua.type(l, -2) {
-				case t if(t == Lua.LUA_TSTRING): v.set(Lua.tostring(l, -2), fromLua(l, -1));
-				case t if(t == Lua.LUA_TNUMBER):v.set(Std.string(Lua.tonumber(l, -2)), fromLua(l, -1));
+			count++;
+			if (isArray) {
+				if (Lua.type(l, -2) != Lua.LUA_TNUMBER) {
+					isArray = false;
+				} else {
+					var n = Lua.tonumber(l, -2);
+					var ni = Std.int(n);
+					if (n != ni || ni < 1) {
+						isArray = false;
+					} else if (ni > maxIndex) {
+						maxIndex = ni;
+					}
+				}
 			}
 		});
-		return v;
-		
-	}
-	/**
-		Calls a lua function at `func` with `args`. If multipleReturns is true, return an array of results from the function, else return the first result
 
-		If func is nil, the function at the top of the stack will be run
-		If the lua function errors, a llua.LuaException will be thrown
-	**/
-	public static function callLuaFunction(l, ?func:String,?args:Array<Dynamic> = null,?multipleReturns:Bool=false):Dynamic {
-		if(func != null) Lua.getglobal(l, func);
-		if(args != null) {
-			for(arg in args) Convert.toLua(l,arg);
+		if (count == 0) return {};
+
+		// If index range matches count it is a proper sequence (no holes).
+		if (isArray && maxIndex == count) {
+			var arr:Array<Dynamic> = [];
+			arr.resize(count);
+			loopTable(l, i, {
+				arr[Std.int(Lua.tonumber(l, -2)) - 1] = fromLua(l, -1);
+			});
+			return arr;
 		}
-		LuaException.ifErrorThrow(l,Lua.pcall(l, args == null ? 0 : args.length, multipleReturns ? Lua.LUA_MULTRET : 1,0));
 
-		if(!multipleReturns) return fromLua(l,fromLua(l,-1));
-		final returnArray = [];
-		for(i in -(Lua.gettop(l)-1)...0){
-			returnArray.push(fromLua(l,i));
-		}
-		return returnArray;
-
+		// Mixed or string-keyed table → anonymous object.
+		var obj:DynamicAccess<Any> = {};
+		loopTable(l, i, {
+			var key:String = switch (Lua.type(l, -2)) {
+				case t if (t == Lua.LUA_TSTRING): Lua.tostring(l, -2);
+				case t if (t == Lua.LUA_TNUMBER): Std.string(Lua.tonumber(l, -2));
+				default: null;
+			};
+			if (key != null) obj.set(key, fromLua(l, -1));
+		});
+		return obj;
 	}
+
+	// -----------------------------------------------------------------------
+	// Convenience call helpers
+	// -----------------------------------------------------------------------
+
 	/**
-		Calls a lua function at `func` with `args`.
+	 * Call a Lua global function by name with Haxe arguments.
+	 *
+	 * - If `func` is null, the function already on top of the stack is called.
+	 * - If `multipleReturns` is true, returns an Array of all return values;
+	 *   otherwise returns the first (or only) return value.
+	 * - Throws `LuaException` on error.
+	 *
+	 * Bug fix: the original returned `fromLua(l, fromLua(l, -1))` — a value
+	 * was passed as a stack index. Now correctly reads index -1.
+	 */
+	public static function callLuaFunction(l:State, ?func:String, ?args:Array<Dynamic>, ?multipleReturns:Bool = false):Dynamic {
+		if (func != null) Lua.getglobal(l, func);
 
-		If func is nil, the function at the top of the stack will be run
-		If the lua function errors, a llua.LuaException will be thrown
+		var argc = 0;
+		if (args != null) {
+			argc = args.length;
+			for (arg in args) toLua(l, arg);
+		}
 
-		This is SLIGHTLY faster than callLuaFunction since it doesn't do any handling of returns. Useful for things like calling an event that doesn't return anything
-	**/
-	public static function callLuaFuncNoReturns(l, func:String,?args:Array<Dynamic> = null):Void {
+		if (multipleReturns) {
+			LuaException.ifErrorThrow(l, Lua.pcall(l, argc, Lua.LUA_MULTRET, 0));
+			var nresults = Lua.gettop(l);
+			var ret:Array<Dynamic> = [];
+			for (i in 0...nresults)
+				ret.push(fromLua(l, i + 1));
+			Lua.settop(l, 0); // clear stack
+			return ret;
+		} else {
+			LuaException.ifErrorThrow(l, Lua.pcall(l, argc, 1, 0));
+			// Bug fix: was `fromLua(l, fromLua(l,-1))` — fromLua returns Any, not Int.
+			var result = fromLua(l, -1);
+			Lua.pop(l, 1);
+			return result;
+		}
+	}
+
+	/**
+	 * Call a Lua global function, ignoring any return values.
+	 * Slightly faster than `callLuaFunction` when returns are not needed.
+	 * Throws `LuaException` on error.
+	 */
+	public static function callLuaFuncNoReturns(l:State, func:String, ?args:Array<Dynamic>):Void {
 		Lua.getglobal(l, func);
-		if(args != null) for(arg in args) Convert.toLua(l,arg);
-		
-		LuaException.ifErrorThrow(l,Lua.pcall(l,args == null ? 0 : args.length, 0,0));
+		var argc = 0;
+		if (args != null) {
+			argc = args.length;
+			for (arg in args) toLua(l, arg);
+		}
+		LuaException.ifErrorThrow(l, Lua.pcall(l, argc, 0, 0));
 	}
+
+	/**
+	 * Haxe callback helper: call a Haxe function from inside a Lua C callback.
+	 * Returns the number of values pushed onto the Lua stack (0 or 1).
+	 */
+	public static function callback_handler(cbf:Dynamic, l:State, ?object:Dynamic):Int {
+		var nparams = Lua.gettop(l);
+		var args:Array<Dynamic> = [for (i in 0...nparams) fromLua(l, i + 1)];
+		try {
+			var ret:Dynamic = Reflect.callMethod(object, cbf, args);
+			if (ret != null) {
+				toLua(l, ret);
+				return 1;
+			}
+		} catch (e:Dynamic) {
+			var msg = (e.message != null) ? e.message : Std.string(e);
+			trace('llua callback error: $msg');
+			throw e;
+		}
+		return 0;
+	}
+
 }
 
-// Anon_obj from hxcpp
+// hxcpp anonymous object factory
 @:include('hxcpp.h')
 @:native('hx::Anon')
 extern class Anon {
-
 	@:native('hx::Anon_obj::Create')
-	public static function create() : Anon;
-
+	public static function create():Anon;
 	@:native('hx::Anon_obj::Add')
 	public function add(k:String, v:Any):Void;
-
 }

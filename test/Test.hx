@@ -8,6 +8,9 @@ class Testing {
 	function die(){
 		trace('no way i died');
 	}
+	function test() {
+		trace("YAAAAAAYYYYYYYY");
+	}
 }
 
 
@@ -18,7 +21,8 @@ class Test {
 
 		var vm:State = LuaL.newstate();
 		LuaL.openlibs(vm);
-		trace("Lua version: " + Lua.version());
+		var v = Lua.version();
+		trace("Lua version: " + v);
 		trace("LuaJIT version: " + Lua.versionJIT());
 
 		LuaL.dofile(vm, "script.lua");

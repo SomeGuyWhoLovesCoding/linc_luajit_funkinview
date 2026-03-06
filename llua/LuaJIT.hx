@@ -1,6 +1,7 @@
 package llua;
 
 
+#if cpp
 import llua.State;
 
 
@@ -16,3 +17,18 @@ extern class LuaJIT {
     public static inline var LUAJIT_MODE_FLUSH:Int  = 0x0200;  /* Flush JIT-compiled code. */
 
 } // LuaJIT
+#elseif hl
+import llua.State;
+
+@:hlNative("lua")
+class LuaJIT {
+
+    @:hlNative("lua", "jit_setmode")
+    static function setmode(l:State, idx:Int, mode:Int):Int { return 0; }
+
+    public static inline var LUAJIT_MODE_OFF:Int   = 0x0000;
+    public static inline var LUAJIT_MODE_ON:Int    = 0x0100;
+    public static inline var LUAJIT_MODE_FLUSH:Int = 0x0200;
+
+}
+#end

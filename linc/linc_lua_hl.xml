@@ -1,0 +1,53 @@
+<xml>
+	<pragma once="true" />
+
+	<cppflag value="HASHLINK" />
+
+	<set name="PROJECT_DIR" value="${this_dir}" />
+	<set name="HASHLINK"    value="${this_dir}/hashlinkBuildXmls/hl" if="windows" />
+	<set name="HASHLINK"    value="${this_dir}/hashlinkBuildXmls/hl_linux" if="linux" />
+	<set name="HL_INCLUDE"  value="${HASHLINK}/include" />
+	<set name="HL_BIN"      value="${HASHLINK}" />
+	<set name="LUAJIT_DIR"  value="${this_dir}/lib/lua" />
+
+	<echo value="hashlink:         ${HASHLINK}" />
+	<echo value="hashlink include: ${HL_INCLUDE}" />
+	<echo value="hashlink bin:     ${HL_BIN}" />
+	<echo value="luajit:           ${LUAJIT_DIR}" />
+
+	<files id="lua_hl">
+		<compilerflag value="-I${HL_INCLUDE}" />
+		<compilerflag value="-I${LUAJIT_DIR}/src" />
+		<file name="${PROJECT_DIR}/linc/linc_lua_hl.cpp" />
+	</files>
+
+	<target id="default" output="lua" toolid="dll" tool="linker">
+		<files id="lua_hl" />
+
+		<!-- LuaJIT static libs — mirrors the platform sections in linc_lua.xml -->
+		<section if="windows" unless="mingw">
+			<lib name="${LUAJIT_DIR}/lib/Windows64/lua51.lib" if="HXCPP_M64" />
+			<lib name="${LUAJIT_DIR}/lib/Windows/lua51.lib"   unless="HXCPP_M64" />
+		</section>
+		<section if="mingw">
+			<lib name="${LUAJIT_DIR}/lib/Windows64/libluajit-5.1.a" if="HXCPP_M64" />
+			<lib name="${LUAJIT_DIR}/lib/Windows/libluajit-5.1.a"   unless="HXCPP_M64" />
+		</section>
+		<section if="linux">
+			<lib name="${LUAJIT_DIR}/lib/Linux64/libluajit.a" if="HXCPP_M64" />
+		</section>
+		<section if="macos">
+			<lib name="${LUAJIT_DIR}/lib/Mac/libluajit-5.1.a" />
+		</section>
+
+		<libpath name="${HASHLINK}"    if="windows" />
+		<libpath name="/usr/local/lib" if="macos" />
+		<lib name="libhl.lib" if="windows" />
+		<lib name="-lhl"      unless="windows" />
+
+		<ext value=".hdll" />
+		<outdir name="hashlinkBuildXmls/hl" if="windows" />
+		<outdir name="hashlinkBuildXmls/hl_linux"   if="linux" />
+		<!--<outdir name="hdlls/macos"   if="macos" />-->
+	</target>
+</xml>

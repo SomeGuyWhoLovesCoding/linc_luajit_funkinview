@@ -1,6 +1,6 @@
 package llua;
 
-
+#if cpp
 import llua.State;
 import llua.Buffer;
 import llua.Lua;
@@ -205,3 +205,77 @@ extern class LuaL {
     static function openlibs(l:State) : Void;
 
 } //LuaL
+#elseif hl
+import llua.State;
+import llua.Lua;
+
+@:hlNative("lua")
+class LuaL {
+
+    @:hlNative("lua", "lual_dofile")
+    public static function dofile(l:State, filename:String):Int { return 0; }
+
+    @:hlNative("lua", "lual_dostring")
+    public static function dostring(l:State, s:String):Int { return 0; }
+
+    @:hlNative("lua", "lual_loadfile")
+    public static function loadfile(l:State, filename:String):Int { return 0; }
+
+    @:hlNative("lua", "lual_loadstring")
+    public static function loadstring(l:State, s:String):Int { return 0; }
+
+    @:hlNative("lua", "lual_openlibs")
+    public static function openlibs(l:State):Void {}
+
+    @:hlNative("lua", "lual_ref")
+    public static function ref(l:State, t:Int):Int { return 0; }
+
+    @:hlNative("lua", "lual_unref")
+    public static function unref(l:State, t:Int, ref:Int):Void {}
+
+    @:hlNative("lua", "lual_where")
+    public static function where(l:State, lvl:Int):Void {}
+
+    @:hlNative("lua", "lual_newmetatable")
+    public static function newmetatable(l:State, tname:String):Int { return 0; }
+
+    @:hlNative("lua", "lual_error")
+    public static function error(l:State, fmt:String):Int { return 0; }
+
+    @:hlNative("lua", "lual_typename")
+    public static function typename(l:State, index:Int):String { return null; }
+
+    @:hlNative("lua", "lual_checknumber")
+    public static function checknumber(l:State, narg:Int):Float { return 0; }
+
+    @:hlNative("lua", "lual_checkinteger")
+    public static function checkinteger(l:State, narg:Int):Int { return 0; }
+
+    @:hlNative("lua", "lual_checkstring")
+    public static function checkstring(l:State, narg:Int):String { return null; }
+
+    @:hlNative("lua", "lual_checktype")
+    public static function checktype(l:State, narg:Int, t:Int):Void {}
+
+    static inline function checktable(l:State, idx:Int):Void {
+        checktype(l, idx, Lua.LUA_TTABLE);
+    }
+
+    @:hlNative("lua", "lual_checkany")
+    public static function checkany(l:State, narg:Int):Void {}
+
+    @:hlNative("lua", "lual_argerror")
+    public static function argerror(l:State, narg:Int, extramsg:String):Int { return 0; }
+
+    @:hlNative("lua", "lual_traceback")
+    public static function traceback(l:State, l2:State, msg:String, level:Int):Void {}
+
+    @:hlNative("lua", "newstate")
+    public static function newstate():State { return null; }
+
+    /* predefined references */
+    public static inline var LUA_NOREF:Int  = -2;
+    public static inline var LUA_REFNIL:Int = -1;
+
+}
+#end
