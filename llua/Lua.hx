@@ -556,7 +556,7 @@ class Lua {
     // -----------------------------------------------------------------------
 
     public static function isnumber(l:State, idx:Int):Int { return 0; }
-    public static function isfunction(l:State, idx:Int):Int { return 0; }
+    public static function isfunction(l:State, idx:Int):Bool { return false; }
     public static function isstring(l:State, idx:Int):Int { return 0; }
     public static function iscfunction(l:State, idx:Int):Int { return 0; }
     public static function isuserdata(l:State, idx:Int):Int { return 0; }

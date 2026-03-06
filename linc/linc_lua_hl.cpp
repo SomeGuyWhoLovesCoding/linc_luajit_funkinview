@@ -130,7 +130,7 @@ DEFINE_PRIM(_VOID, xmove,      _ABSTRACT(lua_state) _ABSTRACT(lua_state) _I32);
 // ---------------------------------------------------------------------------
 
 HL_PRIM int HL_NAME(isnumber)(lua_State *L, int i)    { return lua_isnumber(L, i); }
-HL_PRIM int HL_NAME(isfunction)(lua_State *L, int i)  { return lua_isfunction(L, i); }
+HL_PRIM bool HL_NAME(isfunction)(lua_State *L, int i)  { return lua_isfunction(L, i) != 0; }
 HL_PRIM int HL_NAME(isstring)(lua_State *L, int i)    { return lua_isstring(L, i); }
 HL_PRIM int HL_NAME(iscfunction)(lua_State *L, int i) { return lua_iscfunction(L, i); }
 HL_PRIM int HL_NAME(isuserdata)(lua_State *L, int i)  { return lua_isuserdata(L, i); }
@@ -141,7 +141,7 @@ HL_PRIM int HL_NAME(isnone)(lua_State *L, int i)      { return lua_isnone(L, i);
 HL_PRIM int HL_NAME(isnoneornil)(lua_State *L, int i) { return lua_isnoneornil(L, i); }
 
 DEFINE_PRIM(_I32, isnumber,    _ABSTRACT(lua_state) _I32);
-DEFINE_PRIM(_I32, isfunction,  _ABSTRACT(lua_state) _I32);
+DEFINE_PRIM(_BOOL, isfunction,  _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32, isstring,    _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32, iscfunction, _ABSTRACT(lua_state) _I32);
 DEFINE_PRIM(_I32, isuserdata,  _ABSTRACT(lua_state) _I32);

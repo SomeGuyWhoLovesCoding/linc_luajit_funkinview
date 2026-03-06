@@ -35,7 +35,7 @@ class LuaCallback {
 			return;
 		}
 		Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
-		if (Lua.isfunction(l, -1) != 0) {
+		if (Lua.isfunction(l, -1)) {
 			Lua.pop(l, 1);
 			trace("LuaCallback: registry ref is no longer a function.");
 			return;
@@ -65,7 +65,7 @@ class LuaCallback {
 	public function callWithReturn(?args:Array<Dynamic>):Array<Dynamic> {
 		if (disposed) throw "LuaCallback.callWithReturn() called after dispose()";
 		Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
-		if (Lua.isfunction(l, -1) != 0) {
+		if (Lua.isfunction(l, -1)) {
 			Lua.pop(l, 1);
 			throw "LuaCallback: registry ref is no longer a function.";
 		}
