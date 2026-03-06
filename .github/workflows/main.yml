@@ -37,7 +37,10 @@ jobs:
           haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
         shell: cmd
       - name: Compile
-        run: haxelib run hxcpp linc/linc_lua.xml
+        run: |
+          cd ./hashlinkBuildXmls/hl/
+          haxe build.hxml
+        # haxelib run hxcpp linc/linc_lua.xml
       - name: Publish artifact
         uses: actions/upload-artifact@v5.0.0
         with:
@@ -95,8 +98,8 @@ jobs:
         shell: cmd
       - name: Compile
         run: |
-          haxelib run hxcpp 
-          haxelib run hxcpp linc/linc_lua.xml
+          cd ./hashlinkBuildXmls/hl_linux/
+          haxe build.hxml
       - name: Publish artifact
         uses: nmerget/upload-gzip-artifact@main
         with:
