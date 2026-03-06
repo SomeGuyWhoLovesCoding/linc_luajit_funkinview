@@ -555,12 +555,12 @@ class Lua {
     // Access (stack → Haxe)
     // -----------------------------------------------------------------------
 
-    public static function isnumber(l:State, idx:Int):Int { return 0; }
-    public static function isfunction(l:State, idx:Int):Int { return 0; }
-    public static function isstring(l:State, idx:Int):Int { return 0; }
-    public static function iscfunction(l:State, idx:Int):Int { return 0; }
-    public static function isuserdata(l:State, idx:Int):Int { return 0; }
-    public static function isboolean(l:State, idx:Int):Int { return 0; }
+    public static function isnumber(l:State, idx:Int):Bool { return false; }
+    public static function isfunction(l:State, idx:Int):Bool { return false; }
+    public static function isstring(l:State, idx:Int):Bool { return false; }
+    public static function iscfunction(l:State, idx:Int):Bool { return false; }
+    public static function isuserdata(l:State, idx:Int):Bool { return false; }
+    public static function isboolean(l:State, idx:Int):Bool { return false; }
     public static function istable(l:State, idx:Int):Int { return 0; }
     public static function isnil(l:State, idx:Int):Int { return 0; }
     public static function isnone(l:State, idx:Int):Int { return 0; }
@@ -644,7 +644,6 @@ class Lua {
     // Version
     // -----------------------------------------------------------------------
 
-    @:hlNative("lua", "version")
     public static function version():String { return null; }
     @:hlNative("lua", "versionjit")
     public static function versionJIT():String { return null; }
