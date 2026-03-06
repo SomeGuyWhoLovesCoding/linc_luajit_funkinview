@@ -645,9 +645,19 @@ class Lua {
     // -----------------------------------------------------------------------
 
     @:hlNative("lua", "version")
-    public static function version():String { return null; }
+    public static function _version():hl.Bytes { return null; }
     @:hlNative("lua", "versionjit")
-    public static function versionJIT():String { return null; }
+    public static function _versionJIT():hl.Bytes { return null; }
+
+	public static function version():String {
+		@:privateAccess
+		return String.fromUTF8(_version());
+	}
+
+	public static function versionJIT():String {
+		@:privateAccess
+		return String.fromUTF8(_versionJIT());
+	}
 
     // -----------------------------------------------------------------------
     // Callback system
