@@ -11,7 +11,7 @@ This library works with the hxcpp and hl targets only.
 
 ### Example usage
 
-See hashlinkBuildXmls/hl/
+See hashlinkBuildXmls/hl/ (or hashlinkBuildXmls/hl_linux/ if on linux)
 
 Be sure to read the Lua documentation  
 www.lua.org/manual/5.1/manual.html  
