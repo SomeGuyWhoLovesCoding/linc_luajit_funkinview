@@ -9,6 +9,8 @@ package llua;
  */
 class LuaCallback {
 
+	private var NO_ARGS = [];
+
 	/** The Lua state this function belongs to. */
 	private var l:State;
 
@@ -29,7 +31,7 @@ class LuaCallback {
 	 *
 	 * Does nothing if `dispose()` has already been called.
 	 */
-	public function call(?args:Array<Dynamic>):Void {
+	public function call(args:haxe.Rest<Dynamic>):Void {
 		if (disposed) {
 			trace("LuaCallback.call() called after dispose() — ignoring.");
 			return;
@@ -40,8 +42,8 @@ class LuaCallback {
 			trace("LuaCallback: registry ref is no longer a function.");
 			return;
 		}
-		if (args == null) args = [];
-		for (arg in args) Convert.toLua(l, arg);
+		var argsArr = args != null ? args.toArray() : NO_ARGS;
+		for (arg in argsArr) Convert.toLua(l, arg);
 		var status = Lua.pcall(l, args.length, 0, 0);
 		if (status != Lua.LUA_OK) {
 			var err = Lua.tostring(l, -1);
@@ -62,16 +64,13 @@ class LuaCallback {
 	 * Invoke this Lua function and return all values it pushes as a Haxe Array.
 	 * Throws `LuaException` on error.
 	 */
-	public function callWithReturn(?args:Array<Dynamic>):Array<Dynamic> {
-		if (disposed) throw "LuaCallback.callWithReturn() called after dispose()";
+	public function callWithReturn(args:haxe.Rest<Dynamic>):Array<Dynamic> {
+		if (disposed) throw "...";
 		Lua.rawgeti(l, Lua.LUA_REGISTRYINDEX, ref);
-		if (Lua.isfunction(l, -1)) {
-			Lua.pop(l, 1);
-			throw "LuaCallback: registry ref is no longer a function.";
-		}
-		if (args == null) args = [];
-		for (arg in args) Convert.toLua(l, arg);
-		LuaException.ifErrorThrow(l, Lua.pcall(l, args.length, Lua.LUA_MULTRET, 0));
+		if (Lua.isfunction(l, -1)) { Lua.pop(l, 1); throw "..."; }
+		var argsArr = args != null ? args.toArray() : NO_ARGS;
+		for (arg in argsArr) Convert.toLua(l, arg);
+		LuaException.ifErrorThrow(l, Lua.pcall(l, argsArr.length, Lua.LUA_MULTRET, 0));
 		var nresults = Lua.gettop(l);
 		var ret:Array<Dynamic> = [for (i in 0...nresults) Convert.fromLua(l, i + 1)];
 		Lua.settop(l, 0);

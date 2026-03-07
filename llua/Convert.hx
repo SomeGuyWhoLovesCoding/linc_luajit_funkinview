@@ -188,6 +188,8 @@ class Convert {
 	// Convenience call helpers
 	// -----------------------------------------------------------------------
 
+	private static var NO_ARGS = [];
+
 	/**
 	 * Call a Lua global function by name with Haxe arguments.
 	 *
@@ -199,26 +201,22 @@ class Convert {
 	 * Bug fix: the original returned `fromLua(l, fromLua(l, -1))` — a value
 	 * was passed as a stack index. Now correctly reads index -1.
 	 */
-	public static function callLuaFunction(l:State, ?func:String, ?args:Array<Dynamic>, ?multipleReturns:Bool = false):Dynamic {
+	public static function callLuaFunction(l:State, ?func:String, ?multipleReturns:Bool = false, args:haxe.Rest<Dynamic>):Dynamic {
 		if (func != null) Lua.getglobal(l, func);
 
-		var argc = 0;
-		if (args != null) {
-			argc = args.length;
-			for (arg in args) toLua(l, arg);
-		}
+		var argsArr = args != null ? args.toArray() : NO_ARGS;
+		var argc = argsArr.length;
+		for (arg in argsArr) toLua(l, arg);
 
 		if (multipleReturns) {
 			LuaException.ifErrorThrow(l, Lua.pcall(l, argc, Lua.LUA_MULTRET, 0));
 			var nresults = Lua.gettop(l);
 			var ret:Array<Dynamic> = [];
-			for (i in 0...nresults)
-				ret.push(fromLua(l, i + 1));
-			Lua.settop(l, 0); // clear stack
+			for (i in 0...nresults) ret.push(fromLua(l, i + 1));
+			Lua.settop(l, 0);
 			return ret;
 		} else {
 			LuaException.ifErrorThrow(l, Lua.pcall(l, argc, 1, 0));
-			// Bug fix: was `fromLua(l, fromLua(l,-1))` — fromLua returns Any, not Int.
 			var result = fromLua(l, -1);
 			Lua.pop(l, 1);
 			return result;
@@ -230,13 +228,12 @@ class Convert {
 	 * Slightly faster than `callLuaFunction` when returns are not needed.
 	 * Throws `LuaException` on error.
 	 */
-	public static function callLuaFuncNoReturns(l:State, func:String, ?args:Array<Dynamic>):Void {
+	public static function callLuaFuncNoReturns(l:State, func:String, args:haxe.Rest<Dynamic>):Void {
 		Lua.getglobal(l, func);
 		var argc = 0;
-		if (args != null) {
-			argc = args.length;
-			for (arg in args) toLua(l, arg);
-		}
+		var argsArr = args != null ? args.toArray() : NO_ARGS;
+		var argc = argsArr.length;
+		for (arg in argsArr) toLua(l, arg);
 		LuaException.ifErrorThrow(l, Lua.pcall(l, argc, 0, 0));
 	}
 

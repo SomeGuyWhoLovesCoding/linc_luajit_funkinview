@@ -743,15 +743,18 @@ class Lua_helper {
 
     public static var sendErrorsToLua:Bool = true;
 
+	private static var arg_cache:Array<Dynamic> = [];
+
     public static function callback_handler(l:State, fname:String):Int {
         var cbf = callbacks.get(fname);
         if (cbf == null) return 0;
 
         var nparams = Lua.gettop(l);
-        var args:Array<Dynamic> = [for (i in 0...nparams) Convert.fromLua(l, i + 1)];
+		arg_cache.resize(nparams);
+        for (i in 0...nparams) arg_cache[i] = Convert.fromLua(l, i + 1);
 
         try {
-            var ret:Dynamic = Reflect.callMethod(null, cbf, args);
+            var ret:Dynamic = Reflect.callMethod(null, cbf, arg_cache);
             if (ret != null) {
                 Convert.toLua(l, ret);
                 return 1;

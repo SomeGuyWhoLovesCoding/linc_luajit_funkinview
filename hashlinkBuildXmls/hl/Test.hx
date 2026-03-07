@@ -42,9 +42,9 @@ class Test {
 			["Anon.v", {"v":"six"},"v"],
 		];
 		trace("from haxe:");
-		trace(Convert.callLuaFunction(vm,'fromHaxe',[testValues]));
+		trace(Convert.callLuaFunction(vm,'fromHaxe',false,testValues));
 		trace("to haxe:");
-		trace(Convert.callLuaFunction(vm,'toHaxe',null,true));
+		trace(Convert.callLuaFunction(vm,'toHaxe',true,null));
 
 
 		Convert.setGlobal(vm,"haxeValue",Testing);
