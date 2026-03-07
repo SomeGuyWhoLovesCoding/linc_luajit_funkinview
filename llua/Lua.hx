@@ -673,7 +673,7 @@ class Lua {
     public static function add_callback_function(l:State, name:String):Void {}
     public static function remove_callback_function(l:State, name:String):Void {}
 
-    static inline function init_callbacks(l:State):Void {
+    static public inline function init_callbacks(l:State):Void {
         set_callbacks_function(Lua_helper.callback_handler);
     }
 
@@ -746,30 +746,29 @@ class Lua_helper {
 	private static var arg_cache:Array<Dynamic> = [];
 
     public static function callback_handler(l:State, fname:String):Int {
-        var cbf = callbacks.get(fname);
-        if (cbf == null) return 0;
+		var cbf = callbacks.get(fname);
+		if (cbf == null) return 0;
 
-        var nparams = Lua.gettop(l);
-		arg_cache.resize(nparams);
-        for (i in 0...nparams) arg_cache[i] = Convert.fromLua(l, i + 1);
+		var nparams = Lua.gettop(l);
+		var args:Array<Dynamic> = [for (i in 0...nparams) Convert.fromLua(l, i + 1)];
 
-        try {
-            var ret:Dynamic = Reflect.callMethod(null, cbf, arg_cache);
-            if (ret != null) {
-                Convert.toLua(l, ret);
-                return 1;
-            }
-        } catch (e:Dynamic) {
-            var msg = 'CALLBACK ERROR! ${(e.message != null) ? e.message : Std.string(e)}';
-            if (sendErrorsToLua) {
-                LuaL.error(l, msg);
-                return 0;
-            }
-            trace(msg);
-            throw e;
-        }
-        return 0;
-    }
+		try {
+			var ret:Dynamic = Reflect.callMethod(null, cbf, args);
+			if (ret != null) {
+				Convert.toLua(l, ret);
+				return 1;
+			}
+		} catch (e:Dynamic) {
+			var msg = 'CALLBACK ERROR! ${(e.message != null) ? e.message : Std.string(e)}';
+			if (sendErrorsToLua) {
+				LuaL.error(l, msg);
+				return 0;
+			}
+			trace(msg);
+			throw e;
+		}
+		return 0;
+	}
 
 }
 

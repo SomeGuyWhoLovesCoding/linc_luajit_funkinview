@@ -266,10 +266,10 @@ namespace linc {
     namespace callbacks {
 
         static luaCallbackFN event_fn = 0;
-        static int luaCallback(lua_State *L){
-
-            return event_fn(L, ::String(lua_tostring(L, lua_upvalueindex(1))));
-
+        static int luaCallback(lua_State* L) {
+            const char* name = lua_tostring(L, lua_upvalueindex(1));
+            if (name == NULL) return 0;
+            return event_fn(L, ::String(name));
         }
 
         void set_callbacks_function(luaCallbackFN fn){
