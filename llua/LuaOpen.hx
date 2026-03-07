@@ -82,3 +82,4 @@ class LuaOpen {
     static function ffi(l:State):Int { return 0; }
 
 }
+#end
