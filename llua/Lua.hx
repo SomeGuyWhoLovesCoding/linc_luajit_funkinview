@@ -421,10 +421,10 @@ class Lua_helper {
 	// -----------------------------------------------------------------------
 
 	/** Map from Lua function name → Haxe function. */
-	public static var callbacks:Map<String, Dynamic> = new Map();
+	public static var callbacks:haxe.ds.StringMap<Array<Dynamic>->Dynamic> = new haxe.ds.StringMap();
 
 	/** Register a Haxe function as a callable Lua global. */
-	public static inline function add_callback(l:State, fname:String, f:Dynamic):Bool {
+	public static inline function add_callback(l:State, fname:String, f:Array<Dynamic>->Dynamic):Bool {
 		callbacks.set(fname, f);
 		Lua.add_callback_function(l, fname);
 		return true;
@@ -443,16 +443,23 @@ class Lua_helper {
 	 */
 	public static var sendErrorsToLua:Bool = true;
 
+	/** Pre-allocated arg buffer — reused every call to avoid per-call GC pressure. */
+	private static var arg_cache:Array<Dynamic> = [];
+
 	/** Internal dispatcher called from C when a registered callback is invoked. */
 	public static function callback_handler(l:State, fname:String):Int {
 		var cbf = callbacks.get(fname);
 		if (cbf == null) return 0;
 
 		var nparams = Lua.gettop(l);
-		var args:Array<Dynamic> = [for (i in 0...nparams) Convert.fromLua(l, i + 1)];
+
+		// Reuse arg_cache to avoid allocating a new array on every call.
+		arg_cache.resize(nparams);
+		for (i in 0...nparams)
+			arg_cache[i] = Convert.fromLua(l, i + 1);
 
 		try {
-			var ret:Dynamic = Reflect.callMethod(null, cbf, args);
+			var ret:Dynamic = cbf(arg_cache);
 			if (ret != null) {
 				Convert.toLua(l, ret);
 				return 1;
@@ -705,55 +712,61 @@ class Lua {
 
 class Lua_helper {
 
-    // -----------------------------------------------------------------------
-    // hxtrace
-    // -----------------------------------------------------------------------
+	// -----------------------------------------------------------------------
+	// hxtrace
+	// -----------------------------------------------------------------------
 
-    public static dynamic function trace(s:String, ?inf:haxe.PosInfos):Void {
-        haxe.Log.trace(s, inf);
-    }
+	public static dynamic function trace(s:String, ?inf:haxe.PosInfos):Void {
+		haxe.Log.trace(s, inf);
+	}
 
-    static function print_function(s:String):Int {
-        trace(s);
-        return 0;
-    }
+	static function print_function(s:String):Int {
+		trace(s);
+		return 0;
+	}
 
-    public static inline function register_hxtrace(l:State):Void {
-        Lua.register_hxtrace_func(print_function);
-        Lua.register_hxtrace_lib(l);
-    }
+	public static inline function register_hxtrace(l:State):Void {
+		Lua.register_hxtrace_func(print_function);
+		Lua.register_hxtrace_lib(l);
+	}
 
-    // -----------------------------------------------------------------------
-    // Callback registry
-    // -----------------------------------------------------------------------
+	// -----------------------------------------------------------------------
+	// Callback registry
+	// -----------------------------------------------------------------------
 
-    public static var callbacks:Map<String, Dynamic> = new Map();
+	/** Map from Lua function name → typed Haxe callback. */
+	public static var callbacks:haxe.ds.StringMap<Array<Dynamic>->Dynamic> = new haxe.ds.StringMap();
 
-    public static inline function add_callback(l:State, fname:String, f:Dynamic):Bool {
-        callbacks.set(fname, f);
-        Lua.add_callback_function(l, fname);
-        return true;
-    }
+	public static inline function add_callback(l:State, fname:String, f:Array<Dynamic>->Dynamic):Bool {
+		callbacks.set(fname, f);
+		Lua.add_callback_function(l, fname);
+		return true;
+	}
 
-    public static inline function remove_callback(l:State, fname:String):Bool {
-        callbacks.remove(fname);
-        Lua.remove_callback_function(l, fname);
-        return true;
-    }
+	public static inline function remove_callback(l:State, fname:String):Bool {
+		callbacks.remove(fname);
+		Lua.remove_callback_function(l, fname);
+		return true;
+	}
 
-    public static var sendErrorsToLua:Bool = true;
+	public static var sendErrorsToLua:Bool = true;
 
+	/** Pre-allocated arg buffer — reused every call to avoid per-call GC pressure. */
 	private static var arg_cache:Array<Dynamic> = [];
 
-    public static function callback_handler(l:State, fname:String):Int {
+	public static function callback_handler(l:State, fname:String):Int {
 		var cbf = callbacks.get(fname);
 		if (cbf == null) return 0;
 
 		var nparams = Lua.gettop(l);
-		var args:Array<Dynamic> = [for (i in 0...nparams) Convert.fromLua(l, i + 1)];
+
+		// Reuse arg_cache to avoid allocating a new array on every call.
+		arg_cache.resize(nparams);
+		for (i in 0...nparams)
+			arg_cache[i] = Convert.fromLua(l, i + 1);
 
 		try {
-			var ret:Dynamic = Reflect.callMethod(null, cbf, args);
+			var ret:Dynamic = cbf(arg_cache);
 			if (ret != null) {
 				Convert.toLua(l, ret);
 				return 1;
@@ -787,3 +800,4 @@ typedef Lua_Debug = {
     @:optional var i_ci:Int;
 }
 #end
+
