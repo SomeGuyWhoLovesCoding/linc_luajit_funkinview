@@ -421,10 +421,10 @@ class Lua_helper {
 	// -----------------------------------------------------------------------
 
 	/** Map from Lua function name → Haxe function. */
-	public static var callbacks:haxe.ds.StringMap<Array<Dynamic>->Dynamic> = new haxe.ds.StringMap();
+	public static var callbacks:haxe.ds.StringMap<Dynamic> = new haxe.ds.StringMap();
 
 	/** Register a Haxe function as a callable Lua global. */
-	public static inline function add_callback(l:State, fname:String, f:Array<Dynamic>->Dynamic):Bool {
+	public static inline function add_callback(l:State, fname:String, f:Dynamic):Bool {
 		callbacks.set(fname, f);
 		Lua.add_callback_function(l, fname);
 		return true;
@@ -459,7 +459,7 @@ class Lua_helper {
 			arg_cache[i] = Convert.fromLua(l, i + 1);
 
 		try {
-			var ret:Dynamic = cbf(arg_cache);
+			var ret:Dynamic = Reflect.callMethod(null, cbf, arg_cache);
 			if (ret != null) {
 				Convert.toLua(l, ret);
 				return 1;
@@ -735,9 +735,9 @@ class Lua_helper {
 	// -----------------------------------------------------------------------
 
 	/** Map from Lua function name → typed Haxe callback. */
-	public static var callbacks:haxe.ds.StringMap<Array<Dynamic>->Dynamic> = new haxe.ds.StringMap();
+	public static var callbacks:haxe.ds.StringMap<Dynamic> = new haxe.ds.StringMap();
 
-	public static inline function add_callback(l:State, fname:String, f:Array<Dynamic>->Dynamic):Bool {
+	public static inline function add_callback(l:State, fname:String, f:Dynamic):Bool {
 		callbacks.set(fname, f);
 		Lua.add_callback_function(l, fname);
 		return true;
@@ -766,7 +766,7 @@ class Lua_helper {
 			arg_cache[i] = Convert.fromLua(l, i + 1);
 
 		try {
-			var ret:Dynamic = cbf(arg_cache);
+			var ret:Dynamic = Reflect.callMethod(null, cbf, arg_cache);
 			if (ret != null) {
 				Convert.toLua(l, ret);
 				return 1;
