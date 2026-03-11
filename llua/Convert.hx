@@ -260,6 +260,7 @@ class Convert {
 
 }
 
+#if cpp
 // hxcpp anonymous object factory
 @:include('hxcpp.h')
 @:native('hx::Anon')
@@ -269,3 +270,4 @@ extern class Anon {
 	@:native('hx::Anon_obj::Add')
 	public function add(k:String, v:Any):Void;
 }
+#end
