@@ -208,21 +208,22 @@ extern class LuaL {
 #elseif hl
 import llua.State;
 import llua.Lua;
+import llua.HlString;
 
 @:hlNative("lua")
 class LuaL {
 
     @:hlNative("lua", "lual_dofile")
-    public static function dofile(l:State, filename:String):Int { return 0; }
+    public static function dofile(l:State, filename:HlString):Int { return 0; }
 
     @:hlNative("lua", "lual_dostring")
-    public static function dostring(l:State, s:String):Int { return 0; }
+    public static function dostring(l:State, s:HlString):Int { return 0; }
 
     @:hlNative("lua", "lual_loadfile")
-    public static function loadfile(l:State, filename:String):Int { return 0; }
+    public static function loadfile(l:State, filename:HlString):Int { return 0; }
 
     @:hlNative("lua", "lual_loadstring")
-    public static function loadstring(l:State, s:String):Int { return 0; }
+    public static function loadstring(l:State, s:HlString):Int { return 0; }
 
     @:hlNative("lua", "lual_openlibs")
     public static function openlibs(l:State):Void {}
@@ -237,13 +238,17 @@ class LuaL {
     public static function where(l:State, lvl:Int):Void {}
 
     @:hlNative("lua", "lual_newmetatable")
-    public static function newmetatable(l:State, tname:String):Int { return 0; }
+    public static function newmetatable(l:State, tname:HlString):Int { return 0; }
 
     @:hlNative("lua", "lual_error")
-    public static function error(l:State, fmt:String):Int { return 0; }
+    public static function error(l:State, fmt:HlString):Int { return 0; }
 
+    // Returns raw bytes; wrap via HlString so callers get a String transparently.
     @:hlNative("lua", "lual_typename")
-    public static function typename(l:State, index:Int):String { return null; }
+    private static function _typename(l:State, index:Int):hl.Bytes { return null; }
+    public static inline function typename(l:State, index:Int):String {
+        return ((_typename(l, index) : HlString) : String);
+    }
 
     @:hlNative("lua", "lual_checknumber")
     public static function checknumber(l:State, narg:Int):Float { return 0; }
@@ -251,8 +256,12 @@ class LuaL {
     @:hlNative("lua", "lual_checkinteger")
     public static function checkinteger(l:State, narg:Int):Int { return 0; }
 
+    // Returns raw bytes; wrap via HlString so callers get a String transparently.
     @:hlNative("lua", "lual_checkstring")
-    public static function checkstring(l:State, narg:Int):String { return null; }
+    private static function _checkstring(l:State, narg:Int):hl.Bytes { return null; }
+    public static inline function checkstring(l:State, narg:Int):String {
+        return ((_checkstring(l, narg) : HlString) : String);
+    }
 
     @:hlNative("lua", "lual_checktype")
     public static function checktype(l:State, narg:Int, t:Int):Void {}
@@ -265,10 +274,10 @@ class LuaL {
     public static function checkany(l:State, narg:Int):Void {}
 
     @:hlNative("lua", "lual_argerror")
-    public static function argerror(l:State, narg:Int, extramsg:String):Int { return 0; }
+    public static function argerror(l:State, narg:Int, extramsg:HlString):Int { return 0; }
 
     @:hlNative("lua", "lual_traceback")
-    public static function traceback(l:State, l2:State, msg:String, level:Int):Void {}
+    public static function traceback(l:State, l2:State, msg:HlString, level:Int):Void {}
 
     @:hlNative("lua", "newstate")
     public static function newstate():State { return null; }

@@ -495,6 +495,7 @@ typedef Lua_Debug = {
 #elseif hl
 import llua.State;
 import llua.Convert;
+import llua.HlString;
 
 @:hlNative("lua")
 class Lua {
@@ -573,18 +574,24 @@ class Lua {
     public static function isnone(l:State, idx:Int):Int { return 0; }
     public static function isnoneornil(l:State, idx:Int):Int { return 0; }
     public static function type(l:State, idx:Int):Int { return 0; }
+
+    // _typename/_tostring return raw bytes; typename/tostring wrap them as String via HlString
+    @:hlNative("lua", "_typename")
     private static function _typename(l:State, tp:Int):hl.Bytes { return null; }
-	public static function typename(l:State, tp:Int):String {
-		return @:privateAccess String.fromUTF8(_typename(l, tp));
-	}
+    public static inline function typename(l:State, tp:Int):String {
+        return ((_typename(l, tp) : HlString) : String);
+    }
 
     public static function tonumber(l:State, idx:Int):Float { return 0; }
     public static function tointeger(l:State, idx:Int):Int { return 0; }
     public static function toboolean(l:State, idx:Int):Bool { return false; }
+
+    @:hlNative("lua", "_tostring")
     private static function _tostring(l:State, idx:Int):hl.Bytes { return null; }
-	public static function tostring(l:State, idx:Int):String {
-		return @:privateAccess String.fromUTF8(_tostring(l, idx));
-	}
+    public static inline function tostring(l:State, idx:Int):String {
+        return ((_tostring(l, idx) : HlString) : String);
+    }
+
     public static function objlen(l:State, idx:Int):Int { return 0; }
 
     // -----------------------------------------------------------------------
@@ -594,7 +601,8 @@ class Lua {
     public static function pushnil(l:State):Void {}
     public static function pushnumber(l:State, n:Float):Void {}
     public static function pushinteger(l:State, n:Int):Void {}
-    public static function pushstring(l:State, s:String):Void {}
+    // pushstring accepts HlString so the implicit @:from conversion fires
+    public static function pushstring(l:State, s:HlString):Void {}
     public static function pushboolean(l:State, b:Bool):Void {}
     public static function pushthread(l:State):Int { return 0; }
 
@@ -603,23 +611,23 @@ class Lua {
     // -----------------------------------------------------------------------
 
     public static function gettable(l:State, idx:Int):Void {}
-    public static function getfield(l:State, idx:Int, k:String):Void {}
+    public static function getfield(l:State, idx:Int, k:HlString):Void {}
     public static function rawget(l:State, idx:Int):Void {}
     public static function rawgeti(l:State, idx:Int, n:Int):Void {}
     public static function createtable(l:State, narr:Int, nrec:Int):Void {}
     public static function getmetatable(l:State, idx:Int):Int { return 0; }
-    public static function getglobal(l:State, name:String):Void {}
+    public static function getglobal(l:State, name:HlString):Void {}
 
     // -----------------------------------------------------------------------
     // Set (stack → Lua)
     // -----------------------------------------------------------------------
 
     public static function settable(l:State, idx:Int):Void {}
-    public static function setfield(l:State, idx:Int, k:String):Void {}
+    public static function setfield(l:State, idx:Int, k:HlString):Void {}
     public static function rawset(l:State, idx:Int):Void {}
     public static function rawseti(l:State, idx:Int, n:Int):Void {}
     public static function setmetatable(l:State, idx:Int):Int { return 0; }
-    public static function setglobal(l:State, name:String):Void {}
+    public static function setglobal(l:State, name:HlString):Void {}
 
     // -----------------------------------------------------------------------
     // Load and call
@@ -658,37 +666,40 @@ class Lua {
     // -----------------------------------------------------------------------
 
     @:hlNative("lua", "version")
-    public static function _version():hl.Bytes { return null; }
+    private static function _version():hl.Bytes { return null; }
     @:hlNative("lua", "versionjit")
-    public static function _versionJIT():hl.Bytes { return null; }
+    private static function _versionJIT():hl.Bytes { return null; }
 
-	public static function version():String {
-		@:privateAccess
-		return String.fromUTF8(_version());
-	}
+    public static inline function version():String {
+        return ((_version() : HlString) : String);
+    }
 
-	public static function versionJIT():String {
-		@:privateAccess
-		return String.fromUTF8(_versionJIT());
-	}
+    public static inline function versionJIT():String {
+        return ((_versionJIT() : HlString) : String);
+    }
 
     // -----------------------------------------------------------------------
     // Callback system
     // -----------------------------------------------------------------------
 
-    public static function set_callbacks_function(f:State->String->Int):Void {}
-    public static function add_callback_function(l:State, name:String):Void {}
-    public static function remove_callback_function(l:State, name:String):Void {}
+    // C side: _FUN(_I32, _ABSTRACT(lua_state) _BYTES)
+    // The closure receives the function name as raw bytes; we convert in init_callbacks.
+    public static function set_callbacks_function(f:State->hl.Bytes->Int):Void {}
+    public static function add_callback_function(l:State, name:HlString):Void {}
+    public static function remove_callback_function(l:State, name:HlString):Void {}
 
-    static public inline function init_callbacks(l:State):Void {
-        set_callbacks_function(Lua_helper.callback_handler);
+    public static inline function init_callbacks(l:State):Void {
+        set_callbacks_function(function(l:State, nameBytes:hl.Bytes):Int {
+            return Lua_helper.callback_handler(l, (nameBytes : HlString));
+        });
     }
 
     // -----------------------------------------------------------------------
     // hxtrace
     // -----------------------------------------------------------------------
 
-    public static function register_hxtrace_func(f:String->Int):Void {}
+    // C side: _FUN(_I32, _BYTES)
+    public static function register_hxtrace_func(f:hl.Bytes->Int):Void {}
     public static function register_hxtrace_lib(l:State):Void {}
 
     // -----------------------------------------------------------------------
@@ -720,8 +731,8 @@ class Lua_helper {
 		haxe.Log.trace(s, inf);
 	}
 
-	static function print_function(s:String):Int {
-		trace(s);
+	static function print_function(b:hl.Bytes):Int {
+		trace((b : HlString));
 		return 0;
 	}
 
@@ -800,4 +811,3 @@ typedef Lua_Debug = {
     @:optional var i_ci:Int;
 }
 #end
-

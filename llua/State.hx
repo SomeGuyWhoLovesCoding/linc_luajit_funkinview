@@ -12,9 +12,7 @@ extern class Lua_State {}
 typedef StatePointer = cpp.RawPointer<Lua_State>;
 #elseif hl
 @:hlNative("lua")
-abstract State(hl.Abstract<"lua_state">) {
-    inline function new(s:hl.Abstract<"lua_state">) this = s;
-}
+typedef State = hl.Abstract<"lua_State">;
 #end
 
 
