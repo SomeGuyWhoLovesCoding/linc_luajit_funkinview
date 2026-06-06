@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: 'luajit_funkinview-windows-hl'
-          path: hashlinkBuildXmls/hl/*.hdll
+          path: hdlls/windows/*.hdll
           if-no-files-found: error
 
   HLLinuxBuild:
@@ -100,5 +100,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: 'luajit_funkinview-linux-hl'
-          path: hashlinkBuildXmls/hl_linux/*.hdll
+          path: hdlls\linux/*.hdll
           if-no-files-found: error
