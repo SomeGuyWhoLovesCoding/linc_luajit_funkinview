@@ -15,7 +15,7 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  WindowsBuild:
+  HLWindowsBuild:
     runs-on: windows-latest
     
     steps:
@@ -53,11 +53,11 @@ jobs:
       - name: Publish artifact
         uses: actions/upload-artifact@v7
         with:
-          name: 'luajit_funkinview-windows'
-          path: hashlinkBuildXmls/hl/*.ndll
+          name: 'luajit_funkinview-windows-hl'
+          path: hashlinkBuildXmls/hl/*.hdll
           if-no-files-found: error
 
-  LinuxBuild:
+  HLLinuxBuild:
     runs-on: ubuntu-latest
     
     steps:
@@ -99,6 +99,6 @@ jobs:
       - name: Publish artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 'luajit_funkinview-linux'
-          path: hashlinkBuildXmls/hl_linux/*.ndll
+          name: 'luajit_funkinview-linux-hl'
+          path: hashlinkBuildXmls/hl_linux/*.hdll
           if-no-files-found: error
