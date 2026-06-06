@@ -47,8 +47,7 @@ jobs:
       
       - name: Compile
         run: |
-          cd ./hashlinkBuildXmls/hl/
-          haxe build.hxml
+          haxe linc\linc_lua_hl.xml
       
       - name: Publish artifact
         uses: actions/upload-artifact@v7
@@ -93,8 +92,7 @@ jobs:
       
       - name: Compile
         run: |
-          cd ./hashlinkBuildXmls/hl_linux/
-          haxe build.hxml
+          haxe linc\linc_lua_hl.xml
       
       - name: Publish artifact
         uses: actions/upload-artifact@v4
