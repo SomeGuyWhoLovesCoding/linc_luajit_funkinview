@@ -100,5 +100,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: 'luajit_funkinview-linux'
-          path: hashlinkBuildXmls/hl/*.ndll
+          path: hashlinkBuildXmls/hl_linux/*.ndll
           if-no-files-found: error
