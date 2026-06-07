@@ -41,7 +41,7 @@ jobs:
           haxelib setup C:/haxelib
           haxelib install format --quiet
           haxelib install hxp --quiet
-          haxelib install hxcpp --quiet
+          haxelib git hxcpp https://github.com/SomeGuyWhoLovesCoding/hxcpp-sgwlfnf.git --quiet
           haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
         shell: cmd
       
@@ -87,7 +87,7 @@ jobs:
           haxelib setup ~/haxelib
           haxelib install format --quiet
           haxelib install hxp --quiet
-          haxelib install hxcpp --quiet
+          haxelib git hxcpp https://github.com/SomeGuyWhoLovesCoding/hxcpp-sgwlfnf.git --quiet
           haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
       
       - name: Compile
