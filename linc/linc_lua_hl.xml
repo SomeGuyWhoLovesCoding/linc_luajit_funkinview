@@ -37,6 +37,7 @@
 			<lib name="${LUAJIT_DIR}/lib/Linux64/libluajit.a" if="HXCPP_M64" />
 			<!-- The path where libhl.so is located -->
 			<libpath name="${HL_BIN}" />
+			<flag value="-Wl,-z,notext" />
 		</section>
 		<section if="macos">
 			<lib name="${LUAJIT_DIR}/lib/Mac/libluajit-5.1.a" />
