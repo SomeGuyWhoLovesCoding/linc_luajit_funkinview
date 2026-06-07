@@ -34,13 +34,11 @@
 			<lib name="${LUAJIT_DIR}/lib/Windows/libluajit-5.1.a"   unless="HXCPP_M64" />
 		</section>
 		<section if="linux">
-			<!-- Add the library path for LuaJIT -->
-			<libpath name="${LUAJIT_DIR}/lib/Linux64" if="HXCPP_M64" />
-			<lib name="luajit" if="HXCPP_M64" />
-			<!-- Also add path for libhl.so -->
-			<libpath name="${HL_BIN}" />
-			<!-- Allow non-PIC code in shared library -->
+			<!-- Use full paths to libraries -->
+			<lib name="${LUAJIT_DIR}/lib/Linux64/libluajit.a" if="HXCPP_M64" />
+			<lib name="${HL_BIN}/libhl.so" />
 			<flag value="-Wl,-z,notext" />
+			<flag value="-Wl,--allow-shlib-undefined" />
 		</section>
 		<section if="macos">
 			<lib name="${LUAJIT_DIR}/lib/Mac/libluajit-5.1.a" />
@@ -49,7 +47,6 @@
 		<libpath name="${HASHLINK}" if="windows" />
 		<libpath name="/usr/local/lib" if="macos" />
 		<lib name="libhl.lib" if="windows" />
-		<lib name="hl" unless="windows" />
 
 		<ext value=".hdll" />
 		<outdir name="hashlinkBuildXmls/hl" if="windows" />
