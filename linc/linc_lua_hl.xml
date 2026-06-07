@@ -34,9 +34,11 @@
 			<lib name="${LUAJIT_DIR}/lib/Windows/libluajit-5.1.a"   unless="HXCPP_M64" />
 		</section>
 		<section if="linux">
-			<lib name="${LUAJIT_DIR}/lib/Linux64/libluajit.a" if="HXCPP_M64" />
-			<!-- The path where libhl.so is located -->
+			<!-- Instead of linking libluajit.a directly, add its object files -->
+			<file name="${LUAJIT_DIR}/src/libluajit.a" />
 			<libpath name="${HL_BIN}" />
+			<flag value="-Wl,-whole-archive" />
+			<flag value="-Wl,-no-whole-archive" />
 			<flag value="-Wl,-z,notext" />
 		</section>
 		<section if="macos">
