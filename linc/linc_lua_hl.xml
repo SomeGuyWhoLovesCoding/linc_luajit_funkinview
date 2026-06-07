@@ -24,7 +24,7 @@
 	<target id="default" output="lua" toolid="dll" tool="linker">
 		<files id="lua_hl" />
 
-		<!-- LuaJIT static libs — mirrors the platform sections in linc_lua.xml -->
+		<!-- LuaJIT static libs -->
 		<section if="windows" unless="mingw">
 			<lib name="${LUAJIT_DIR}/lib/Windows64/lua51.lib" if="HXCPP_M64" />
 			<lib name="${LUAJIT_DIR}/lib/Windows/lua51.lib"   unless="HXCPP_M64" />
@@ -34,25 +34,25 @@
 			<lib name="${LUAJIT_DIR}/lib/Windows/libluajit-5.1.a"   unless="HXCPP_M64" />
 		</section>
 		<section if="linux">
-			<!-- Instead of linking libluajit.a directly, add its object files -->
-			<file name="${LUAJIT_DIR}/src/libluajit.a" />
+			<!-- Add the library path for LuaJIT -->
+			<libpath name="${LUAJIT_DIR}/lib/Linux64" if="HXCPP_M64" />
+			<lib name="luajit" if="HXCPP_M64" />
+			<!-- Also add path for libhl.so -->
 			<libpath name="${HL_BIN}" />
-			<flag value="-Wl,-whole-archive" />
-			<flag value="-Wl,-no-whole-archive" />
+			<!-- Allow non-PIC code in shared library -->
 			<flag value="-Wl,-z,notext" />
 		</section>
 		<section if="macos">
 			<lib name="${LUAJIT_DIR}/lib/Mac/libluajit-5.1.a" />
 		</section>
 
-		<libpath name="${HASHLINK}"    if="windows" />
+		<libpath name="${HASHLINK}" if="windows" />
 		<libpath name="/usr/local/lib" if="macos" />
 		<lib name="libhl.lib" if="windows" />
-		<lib name="-lhl"      unless="windows" />
+		<lib name="hl" unless="windows" />
 
 		<ext value=".hdll" />
 		<outdir name="hashlinkBuildXmls/hl" if="windows" />
-		<outdir name="hashlinkBuildXmls/hl_linux"   if="linux" />
-		<!--<outdir name="hdlls/macos"   if="macos" />-->
+		<outdir name="hashlinkBuildXmls/hl_linux" if="linux" />
 	</target>
 </xml>
