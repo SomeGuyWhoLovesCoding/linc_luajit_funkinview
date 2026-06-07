@@ -41,7 +41,7 @@
 			<lib name="${LUAJIT_DIR}/lib/Windows/libluajit-5.1.a"   unless="HXCPP_M64" />
 		</section>
 		<section if="linux">
-			<lib name="luajit-5.1" />
+			<lib name="-lluajit-5.1" />
 			<libpath name="/usr/lib/x86_64-linux-gnu" />
 		</section>
 		<section if="macos">
