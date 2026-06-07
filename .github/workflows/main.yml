@@ -1,102 +1,61 @@
-# This is a basic workflow to help you get started with Actions
+<xml>
+	<pragma once="true" />
 
-name: Build
+	<cppflag value="HASHLINK" />
 
-# Controls when the action will run.
-on:
-  # Triggers the workflow on push or pull request events but only for the master branch
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+	<set name="PROJECT_DIR" value="${this_dir}" />
+	<set name="HASHLINK"    value="${this_dir}/hashlinkBuildXmls/hl" if="windows" />
+	<set name="HASHLINK"    value="${this_dir}/hashlinkBuildXmls/hl_linux" if="linux" />
+	<set name="HL_INCLUDE"  value="${HASHLINK}/include" />
+	<set name="HL_BIN"      value="${HASHLINK}" />
+	<set name="LUAJIT_DIR"  value="${this_dir}/lib/lua" />
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+	<echo value="hashlink:         ${HASHLINK}" />
+	<echo value="hashlink include: ${HL_INCLUDE}" />
+	<echo value="hashlink bin:     ${HL_BIN}" />
+	<echo value="luajit:           ${LUAJIT_DIR}" />
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
-jobs:
-  HLWindowsBuild:
-    runs-on: windows-latest
-    
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-      
-      - uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.6
-      
-      # Cache haxelib dependencies
-      - name: Cache haxelib
-        uses: actions/cache@v4
-        with:
-          path: C:/haxelib
-          key: ${{ runner.os }}-haxelib-${{ hashFiles('**/build.hxml') }}
-          restore-keys: |
-            ${{ runner.os }}-haxelib-
-      
-      # Runs a set of commands using the runners shell
-      - name: Install required haxelibs
-        run: |
-          haxelib setup C:/haxelib
-          haxelib install format --quiet
-          haxelib install hxp --quiet
-          haxelib git hxcpp https://github.com/SomeGuyWhoLovesCoding/hxcpp-sgwlfnf.git --quiet
-          haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
-        shell: cmd
-      
-      - name: Compile
-        run: |
-          haxelib run hxcpp "linc/linc_lua_hl.xml"
-      
-      - name: Publish artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: 'luajit_funkinview-windows-hl'
-          path: hdlls/windows/*.hdll
-          if-no-files-found: error
+	<files id="lua_hl">
+		<compilerflag value="-I${HL_INCLUDE}" />
+		<compilerflag value="-I${LUAJIT_DIR}/src" />
+		<file name="${PROJECT_DIR}/linc/linc_lua_hl.cpp" />
+	</files>
 
-  HLLinuxBuild:
-    runs-on: ubuntu-latest
-    
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-      
-      - uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.6
-      
-      # Cache haxelib dependencies
-      - name: Cache haxelib
-        uses: actions/cache@v4
-        with:
-          path: ~/haxelib
-          key: ${{ runner.os }}-haxelib-${{ hashFiles('**/build.hxml') }}
-          restore-keys: |
-            ${{ runner.os }}-haxelib-
-      
-      # Runs a set of commands using the runners shell
-      - name: Install required Linux libraries
-        run: |
-          bash ./setup/linux.bash
-        shell: bash
-      
-      - name: Install required haxelibs
-        run: |
-          haxelib setup ~/haxelib
-          haxelib install format --quiet
-          haxelib install hxp --quiet
-          haxelib git hxcpp https://github.com/SomeGuyWhoLovesCoding/hxcpp-sgwlfnf.git --quiet
-          haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
-      
-      - name: Compile
-        run: |
-          haxelib run hxcpp "linc/linc_lua_hl.xml"
-      
-      - name: Publish artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: 'luajit_funkinview-linux-hl'
-          path: hdlls/linux/*.hdll
-          if-no-files-found: error
+	<target id="default" output="lua" toolid="dll" tool="linker">
+		<files id="lua_hl" />
+
+		<!-- LuaJIT static libs -->
+		<section if="windows" unless="mingw">
+			<lib name="${LUAJIT_DIR}/lib/Windows64/lua51.lib" if="HXCPP_M64" />
+			<lib name="${LUAJIT_DIR}/lib/Windows/lua51.lib"   unless="HXCPP_M64" />
+		</section>
+		<section if="mingw">
+			<lib name="${LUAJIT_DIR}/lib/Windows64/libluajit-5.1.a" if="HXCPP_M64" />
+			<lib name="${LUAJIT_DIR}/lib/Windows/libluajit-5.1.a"   unless="HXCPP_M64" />
+		</section>
+		<section if="linux">
+			<!-- Add library paths -->
+			<libpath name="${LUAJIT_DIR}/lib/Linux64" if="HXCPP_M64" />
+			<libpath name="${HL_BIN}" />
+			<!-- Link flags -->
+			<flag value="-Wl,--no-as-needed" />
+			<flag value="-l:libluajit.a" />
+			<flag value="-l:libhl.so" />
+			<flag value="-Wl,-z,notext" />
+			<flag value="-ldl" />
+			<flag value="-lpthread" />
+			<flag value="-lm" />
+		</section>
+		<section if="macos">
+			<lib name="${LUAJIT_DIR}/lib/Mac/libluajit-5.1.a" />
+		</section>
+
+		<libpath name="${HASHLINK}" if="windows" />
+		<libpath name="/usr/local/lib" if="macos" />
+		<lib name="libhl.lib" if="windows" />
+
+		<ext value=".hdll" />
+		<outdir name="hashlinkBuildXmls/hl" if="windows" />
+		<outdir name="hashlinkBuildXmls/hl_linux" if="linux" />
+	</target>
+</xml>
