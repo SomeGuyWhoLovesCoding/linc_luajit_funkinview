@@ -20,7 +20,7 @@ jobs:
     
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5.0.5
       
       - uses: krdlab/setup-haxe@master
         with:
@@ -44,14 +44,6 @@ jobs:
           haxelib git hxcpp https://github.com/SomeGuyWhoLovesCoding/hxcpp-sgwlfnf.git --quiet
           haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
         shell: cmd
-
-      - name: Check library files
-        run: |
-          ls -la lib/lua/lib/Linux64/
-          ls -la hashlinkBuildXmls/hl_linux/
-          file lib/lua/lib/Linux64/libluajit.a
-          file hashlinkBuildXmls/hl_linux/libhl.so
-        shell: bash
       
       - name: Compile
         run: |
@@ -61,15 +53,16 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: 'luajit_funkinview-windows-hl'
-          path: hdlls/windows/*.hdll
+          path: hashlinkBuildXmls/hl/*.hdll
           if-no-files-found: error
+          retention-days: 7
 
   HLLinuxBuild:
     runs-on: ubuntu-latest
     
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5.0.5
       
       - uses: krdlab/setup-haxe@master
         with:
@@ -84,10 +77,32 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-haxelib-
       
-      # Runs a set of commands using the runners shell
+      # Install required Linux libraries and build tools
       - name: Install required Linux libraries
         run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential make
           bash ./setup/linux.bash
+        shell: bash
+      
+      # Recompile LuaJIT with -fPIC for Linux shared library
+      - name: Recompile LuaJIT with -fPIC
+        run: |
+          echo "=== Recompiling LuaJIT with -fPIC ==="
+          cd lib/lua
+          make clean
+          # Build with -fPIC flags
+          make CFLAGS="-fPIC -O2" \
+               CCOPT="-fPIC" \
+               TARGET_CFLAGS="-fPIC" \
+               TARGET_AR="ar rcus" \
+               -j$(nproc)
+          # Create directory if it doesn't exist
+          mkdir -p lib/Linux64
+          # Copy the newly compiled library
+          cp src/libluajit.a lib/Linux64/
+          echo "=== LuaJIT recompiled successfully ==="
+          cd ../..
         shell: bash
       
       - name: Install required haxelibs
@@ -97,14 +112,18 @@ jobs:
           haxelib install hxp --quiet
           haxelib git hxcpp https://github.com/SomeGuyWhoLovesCoding/hxcpp-sgwlfnf.git --quiet
           haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
+        shell: bash
       
       - name: Compile
         run: |
-          haxelib run hxcpp "linc/linc_lua_hl.xml"
+          export HXCPP_M64=1
+          haxelib run hxcpp "linc/linc_lua_hl.xml" -D HXCPP_M64
+        shell: bash
       
       - name: Publish artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: 'luajit_funkinview-linux-hl'
-          path: hdlls/linux/*.hdll
+          path: hashlinkBuildXmls/hl_linux/*.hdll
           if-no-files-found: error
+          retention-days: 7
