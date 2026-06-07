@@ -34,17 +34,7 @@
 			<lib name="${LUAJIT_DIR}/lib/Windows/libluajit-5.1.a"   unless="HXCPP_M64" />
 		</section>
 		<section if="linux">
-			<!-- Add library paths -->
-			<libpath name="${LUAJIT_DIR}/lib/Linux64" if="HXCPP_M64" />
-			<libpath name="${HL_BIN}" />
-			<!-- Link flags -->
-			<flag value="-Wl,--no-as-needed" />
-			<flag value="-l:libluajit.a" />
-			<flag value="-l:libhl.so" />
-			<flag value="-Wl,-z,notext" />
-			<flag value="-ldl" />
-			<flag value="-lpthread" />
-			<flag value="-lm" />
+			<lib name="${LUAJIT_DIR}/lib/Linux64/libluajit.a" if="HXCPP_M64" />
 		</section>
 		<section if="macos">
 			<lib name="${LUAJIT_DIR}/lib/Mac/libluajit-5.1.a" />
