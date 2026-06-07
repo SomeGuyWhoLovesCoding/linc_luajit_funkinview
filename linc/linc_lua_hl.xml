@@ -40,7 +40,7 @@
 			<lib name="${LUAJIT_DIR}/lib/Windows64/libluajit-5.1.a" if="HXCPP_M64" />
 			<lib name="${LUAJIT_DIR}/lib/Windows/libluajit-5.1.a"   unless="HXCPP_M64" />
 		</section>
-		<section if="linux">
+		<section if="linux HXCPP_M64">
 			<!-- Use system libluajit instead of precompiled -->
 			<libpath name="/usr/lib/x86_64-linux-gnu" />
 			<lib name="luajit-5.1" />
