@@ -41,7 +41,14 @@
 			<lib name="${LUAJIT_DIR}/lib/Windows/libluajit-5.1.a"   unless="HXCPP_M64" />
 		</section>
 		<section if="linux">
-			<lib name="${LUAJIT_DIR}/lib/Linux64/libluajit.a" if="HXCPP_M64" />
+			<!-- Use system libluajit instead of precompiled -->
+			<libpath name="/usr/lib/x86_64-linux-gnu" />
+			<lib name="luajit-5.1" />
+			<libpath name="${HL_BIN}" />
+			<lib name="hl" />
+			<lib name="dl" />
+			<lib name="pthread" />
+			<lib name="m" />
 		</section>
 		<section if="macos">
 			<lib name="${LUAJIT_DIR}/lib/Mac/libluajit-5.1.a" />

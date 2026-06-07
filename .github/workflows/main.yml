@@ -85,26 +85,10 @@ jobs:
           bash ./setup/linux.bash
         shell: bash
       
-      # Recompile LuaJIT with -fPIC for Linux shared library
-      - name: Recompile LuaJIT with -fPIC
+      - name: Install system LuaJIT
         run: |
-          echo "=== Recompiling LuaJIT with -fPIC ==="
-          cd lib/lua/src
-          # Clean object files manually
-          rm -f *.o
-          rm -f libluajit.a
-          # Build with -fPIC flags
-          make CFLAGS="-fPIC -O2" \
-               CCOPT="-fPIC" \
-               TARGET_CFLAGS="-fPIC" \
-               TARGET_AR="ar rcus" \
-               -j$(nproc)
-          # Create directory if it doesn't exist
-          mkdir -p ../lib/Linux64
-          # Copy the newly compiled library
-          cp libluajit.a ../lib/Linux64/
-          echo "=== LuaJIT recompiled successfully ==="
-          cd ../../..
+          sudo apt-get update
+          sudo apt-get install -y libluajit-5.1-dev
         shell: bash
       
       - name: Install required haxelibs
