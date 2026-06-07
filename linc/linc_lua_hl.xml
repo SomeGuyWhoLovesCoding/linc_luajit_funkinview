@@ -15,6 +15,13 @@
 	<echo value="hashlink bin:     ${HL_BIN}" />
 	<echo value="luajit:           ${LUAJIT_DIR}" />
 
+    <files id="__main__">
+        <compilerflag value='-I${LINC_LUA_PATH}linc/'/>
+    </files>
+    <section id = "vars">
+		<set name = "NO_PRECOMPILED_HEADERS" value = "1" />
+    </section>
+
 	<files id="lua_hl">
 		<compilerflag value="-I${HL_INCLUDE}" />
 		<compilerflag value="-I${LUAJIT_DIR}/src" />
