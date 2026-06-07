@@ -102,8 +102,7 @@ jobs:
       
       - name: Compile
         run: |
-          export HXCPP_M64=1
-          haxelib run hxcpp "linc/linc_lua_hl.xml" -D HXCPP_M64
+          haxelib run hxcpp "linc/linc_lua_hl.xml"
         shell: bash
       
       - name: Publish artifact
