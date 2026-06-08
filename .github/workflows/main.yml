@@ -81,18 +81,6 @@ jobs:
           sudo apt-get install -y build-essential make
           bash ./setup/linux.bash
       
-      # Build LuaJIT from your local source with -fPIC
-      - name: Build bundled LuaJIT with -fPIC
-        run: |
-          cd lib/lua
-          make TARGET_CFLAGS="-fPIC"
-          # Create lib directory if it doesn't exist
-          mkdir -p lib/linux
-          # Copy the built library to where your build.xml expects it
-          cp src/libluajit.a lib/linux/
-          cp src/libluajit.so lib/linux/ 2>/dev/null || true
-          echo "✓ Built LuaJIT with -fPIC support"
-      
       - name: Install required haxelibs
         run: |
           haxelib setup ~/haxelib
