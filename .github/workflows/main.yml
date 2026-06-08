@@ -61,14 +61,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
       
       - uses: krdlab/setup-haxe@master
         with:
           haxe-version: 4.3.6
       
-      # Cache haxelib dependencies
       - name: Cache haxelib
         uses: actions/cache@v4
         with:
@@ -77,19 +75,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-haxelib-
       
-      # Install required Linux libraries and build tools
       - name: Install required Linux libraries
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential make
           bash ./setup/linux.bash
-        shell: bash
       
-      - name: Install system LuaJIT
+      # Build LuaJIT from your local source with -fPIC
+      - name: Build bundled LuaJIT with -fPIC
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libluajit-5.1-dev
-        shell: bash
+          cd lib/lua
+          make TARGET_CFLAGS="-fPIC"
+          # Create lib directory if it doesn't exist
+          mkdir -p lib/linux
+          # Copy the built library to where your build.xml expects it
+          cp src/libluajit.a lib/linux/
+          cp src/libluajit.so lib/linux/ 2>/dev/null || true
+          echo "✓ Built LuaJIT with -fPIC support"
       
       - name: Install required haxelibs
         run: |
@@ -98,12 +100,10 @@ jobs:
           haxelib install hxp --quiet
           haxelib git hxcpp https://github.com/SomeGuyWhoLovesCoding/hxcpp-sgwlfnf.git --quiet
           haxelib git linc_luajit_funkinview https://github.com/SomeGuyWhoLovesCoding/linc_luajit_funkinview.git --quiet
-        shell: bash
       
       - name: Compile
         run: |
           haxelib run hxcpp "linc/linc_lua_hl.xml"
-        shell: bash
       
       - name: Publish artifact
         uses: actions/upload-artifact@v7
