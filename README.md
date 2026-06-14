@@ -46,6 +46,3 @@ class Test {
 
 }
 ```
-
-
-Thank you @jobf for recompiling luajit on linux to have `-fPIC`! Hashlink on linux is strict about looking for `-fPIC`, which is rather unfortunate, but that's totally fine to me.

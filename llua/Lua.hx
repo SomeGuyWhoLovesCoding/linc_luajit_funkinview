@@ -155,7 +155,7 @@ extern class Lua {
 	static function pushnumber(l:State, n:Float):Void;
 
 	@:native('lua_pushinteger')
-	static function pushinteger(l:State, n:#if HXCPP_M64 cpp.Int64 #else Int #end):Void;
+	static function pushinteger(l:State, n:Int):Void;
 
 	@:native('lua_pushlstring')
 	static function pushlstring(l:State, s:String, len:Int):Void;
@@ -600,7 +600,7 @@ class Lua {
 
     public static function pushnil(l:State):Void {}
     public static function pushnumber(l:State, n:Float):Void {}
-    public static function pushinteger(l:State, n:hl.I64):Void {}
+    public static function pushinteger(l:State, n:Int):Void {}
     // pushstring accepts HlString so the implicit @:from conversion fires
     public static function pushstring(l:State, s:HlString):Void {}
     public static function pushboolean(l:State, b:Bool):Void {}
