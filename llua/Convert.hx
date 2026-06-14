@@ -5,6 +5,7 @@ import llua.Lua;
 import llua.LuaL;
 import llua.Macro.*;
 import haxe.DynamicAccess;
+import haxe.Int64;
 
 class Convert {
 
@@ -30,7 +31,20 @@ class Convert {
 			case TBool:
 				Lua.pushboolean(l, val);
 			case TInt:
-				Lua.pushinteger(l, cast(val, Int));
+				#if cpp
+				// CPP: Int64 is a 64-bit integer type
+				#if HXCPP_M64
+				var i64:cpp.Int64 = cast val;
+				#else
+				var i64:Int = val;
+				#end
+				Lua.pushinteger(l, i64);
+				#elseif hl
+				// HL: push as Lua number (may lose precision > 2^53)
+				// For full 64-bit, we need a custom userdata, but LuaJIT supports 64-bit ints
+				var i64:hl.I64 = cast val;
+				Lua.pushinteger(l, i64);
+				#end
 			case TFloat:
 				Lua.pushnumber(l, val);
 			case TClass(String):
@@ -113,10 +127,16 @@ class Convert {
 			case Lua.LUA_TBOOLEAN:
 				Lua.toboolean(l, v);
 			case Lua.LUA_TNUMBER:
-				// Preserve Int vs Float distinction when the number is integral.
-				var n = Lua.tonumber(l, v);
-				var ni = Lua.tointeger(l, v);
-				(n == ni) ? cast ni : n;
+				// If it's an integer and fits in 64-bit, return Int64 if large
+				var intVal = Lua.tointeger(l, v);
+				// Check if we should return Int64 vs Int
+				// Could add a config flag, but for now return Int for small numbers
+				var asI64:Int64 = Lua.tointeger(l, v);
+				// If it fits in 32-bit int, return Int for compatibility
+				if (asI64 >= -2147483648 && asI64 <= 2147483647)
+					return Lua.tointeger(l, v);
+				else
+					return asI64;
 			case Lua.LUA_TSTRING:
 				Lua.tostring(l, v);
 			case Lua.LUA_TTABLE:
